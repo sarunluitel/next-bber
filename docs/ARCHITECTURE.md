@@ -1,65 +1,87 @@
 # ARCHITECTURE.md
 
 ## Overview
-This project is a Next.js App Router website for an economics research department. It combines structured content publishing with custom data visualization.
 
-The system has two major responsibilities:
-1. render CMS-driven content pages from JSON payloads
-2. render trustworthy, maintainable D3-based visualizations
+This project is a Next.js App Router site for the UNM Bureau of Business and
+Economic Research. The current implementation focuses on a close recreation of
+the public homepage while establishing the long-lived structure for CMS-driven
+content and reusable shared chrome.
 
-## Architectural shape
+## Current architectural shape
 
-### Content flow
-1. CMS emits JSON payloads for articles, papers, presentations, datasets, and related content.
-2. Server-side loaders fetch those payloads.
-3. Payloads are validated and normalized into stable internal models.
-4. Pages and feature components render from normalized models, not raw CMS objects.
+### Shared site shell
 
-### Visualization flow
-1. Raw data is fetched or received from CMS/API sources.
-2. Data is validated and transformed into chart-ready structures.
-3. D3 primitives compute scales, domains, layout, and interaction logic.
-4. React components own composition and lifecycle, while D3 owns data-to-geometry behavior where appropriate.
+- `src/app/layout.tsx` owns the root document, metadata, and shared site shell.
+- `src/components/site/site-header.tsx` is mostly server-rendered and hands only
+  the interactive navigation layer to a client component.
+- `src/components/site/site-footer.tsx` is shared across the homepage,
+  placeholder routes, search, and not-found states.
 
-## Initial content domains
-These are expected, based on the public site shape and project description:
-- home
-- research
-- data
-- news or blog content
-- research papers/publications
-- research presentations
-- about, services, and contact content
+### Local content boundaries
 
-## Recommended boundaries
+Stable, low-churn site content is modeled locally instead of being embedded in
+JSX:
 
-### Server-side boundaries
-Use server components or route handlers for:
+- `src/content-models/pages.ts` contains the site tree, helper functions for
+  route resolution, and the navigation contract used by the header and
+  placeholder routes.
+- `src/content-models/homepage-content.ts` contains utility-bar links, brand
+  assets, homepage promo content, About BBER copy, and footer data.
+
+This keeps the UI code ready for a future CMS-backed pages feed without mixing
+layout concerns with the data source.
+
+### CMS feed boundaries
+
+Live homepage feeds are fetched on the server only:
+
+- `src/lib/cms/bber-homepage.ts` performs the server-side fetches with
+  `revalidate: 3600`.
+- `src/content-models/bber-homepage.ts` validates and normalizes raw CMS
+  payloads into app-owned view models.
+- Presentational components consume only normalized `BberNewsItem` and
+  `BberPublicationItem` data.
+
+## Route strategy
+
+- `/` is the fully implemented homepage.
+- `/search` is a local placeholder route used by the shared search UI shell.
+- `app/[...slug]/page.tsx` resolves known URLs from `pages.ts` and renders
+  placeholder pages for the current navigation structure.
+- Unknown paths use `notFound()` and fall through to `app/not-found.tsx`.
+
+The placeholder route uses `generateStaticParams` and `dynamicParams = false` so
+known nav paths are statically discoverable and unknown paths 404 cleanly.
+
+## Server and client boundaries
+
+### Server components
+
+Use server components for:
+
+- page rendering
 - CMS fetching
-- payload validation
-- secret-bearing integrations
-- cache policy decisions
-- expensive transforms that do not require the browser
+- payload normalization handoff
+- route resolution for placeholders
+- metadata and shell composition
 
-### Client-side boundaries
-Use client components only for:
-- interactive charts
-- UI interactions that require browser state
-- filters, tabs, viewport-driven behavior, or chart tooltips
+### Client components
 
-Do not move CMS parsing into client components.
+Use client components only where interaction is required:
 
-## Route philosophy
-- Use route groups only when they provide a real organizational benefit.
-- Keep route names aligned with public IA.
-- Avoid deeply nested routing without a product-level reason.
-- Preserve predictable paths for content that may be indexed or shared.
+- desktop dropdown navigation
+- mobile sheet navigation
+- accordion disclosure in the mobile menu
 
-## Documentation triggers
-Update this file when any of the following change:
-- routing structure
-- rendering boundaries
-- visualization architecture
-- data normalization strategy
-- major framework upgrades
-- external service integration shape
+The homepage content itself remains server-rendered.
+
+## Asset strategy
+
+Stable homepage shell assets are stored locally in `public/bber/`:
+
+- horizontal BBER logo
+- hero image
+- section header art
+- conference and forecast promo banners
+
+Live CMS feeds currently supply links and text, not layout-critical imagery.
