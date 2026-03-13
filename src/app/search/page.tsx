@@ -9,9 +9,11 @@ export default async function SearchPage(props: PageProps<"/search">) {
       title="Search"
       lead={
         query
-          ? `Search UI is in place for “${query}”. The final search backend can be connected here when that data source is ready.`
-          : "Search UI is in place. The final search backend can be connected here when that data source is ready."
+          ? `Search for “${query}” is not available yet.`
+          : "Search is currently under construction."
       }
+      statusTitle="Under Construction"
+      statusMessage="Search is currently under construction. Please try again later."
       trail={[
         {
           key: "Search",

@@ -4,7 +4,9 @@ export default function NotFound() {
   return (
     <PlaceholderPage
       title="Page Not Found"
-      lead="The page you requested does not exist in the current BBER site map."
+      lead="The page you requested could not be found."
+      statusTitle="Page Not Found"
+      statusMessage="The page you requested could not be found."
       trail={[
         {
           key: "NotFound",

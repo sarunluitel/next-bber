@@ -8,6 +8,8 @@ type PlaceholderPageProps = {
   title: string;
   lead: string;
   trail: PageTrailEntry[];
+  statusTitle?: string;
+  statusMessage?: string;
   childLinks?: Array<{
     title: string;
     url: string;
@@ -18,6 +20,8 @@ export function PlaceholderPage({
   title,
   lead,
   trail,
+  statusTitle = "Under Construction",
+  statusMessage = "This page is currently under construction. Please check back soon.",
   childLinks = [],
 }: PlaceholderPageProps) {
   return (
@@ -38,15 +42,12 @@ export function PlaceholderPage({
         <Card className="border border-[var(--bber-border)] bg-white py-0 shadow-sm">
           <CardHeader className="px-6 pt-6">
             <CardTitle className="font-display text-2xl text-[var(--bber-ink)]">
-              This page is ready for content
+              {statusTitle}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6 px-6 pb-6">
             <p className="text-sm leading-7 text-[var(--bber-ink)]/75">
-              The shared site shell, navigation, and route structure are already
-              in place. The final content for this section can be connected to a
-              local content model or CMS feed without changing the surrounding
-              UI.
+              {statusMessage}
             </p>
 
             {childLinks.length > 0 ? (

@@ -25,33 +25,31 @@ export default async function Home() {
       </section>
 
       <section className="mx-auto flex w-full max-w-[1200px] flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        <div className="grid gap-8 xl:grid-cols-[minmax(0,2.25fr)_minmax(295px,360px)]">
-          <div className="grid gap-8 lg:grid-cols-2">
-            <FeedSection
-              title={sections.news.title}
-              accentImage={sections.news.accentImage}
-              viewAllUrl={sections.news.viewAllUrl}
-              feed={homepageFeeds.news}
-              emptyMessage={sections.news.emptyMessage}
-              errorMessage={sections.news.errorMessage}
-              itemType="news"
-            />
-            <FeedSection
-              title={sections.publications.title}
-              accentImage={sections.publications.accentImage}
-              viewAllUrl={sections.publications.viewAllUrl}
-              feed={homepageFeeds.publications}
-              emptyMessage={sections.publications.emptyMessage}
-              errorMessage={sections.publications.errorMessage}
-              itemType="publication"
-            />
-          </div>
+        <div className="grid gap-8 lg:grid-cols-2">
+          <FeedSection
+            title={sections.news.title}
+            accentImage={sections.news.accentImage}
+            viewAllUrl={sections.news.viewAllUrl}
+            feed={homepageFeeds.news}
+            emptyMessage={sections.news.emptyMessage}
+            errorMessage={sections.news.errorMessage}
+            itemType="news"
+          />
+          <FeedSection
+            title={sections.publications.title}
+            accentImage={sections.publications.accentImage}
+            viewAllUrl={sections.publications.viewAllUrl}
+            feed={homepageFeeds.publications}
+            emptyMessage={sections.publications.emptyMessage}
+            errorMessage={sections.publications.errorMessage}
+            itemType="publication"
+          />
+        </div>
 
-          <aside className="grid content-start gap-8">
-            {promotions.map((promotion) => (
-              <PromoCard key={promotion.url} {...promotion} />
-            ))}
-          </aside>
+        <div className="grid gap-8 lg:grid-cols-2">
+          {promotions.map((promotion) => (
+            <PromoCard key={promotion.url} {...promotion} />
+          ))}
         </div>
 
         <AboutBberSection content={about} />

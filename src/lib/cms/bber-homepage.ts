@@ -9,7 +9,7 @@ import {
 
 const BBER_NEWS_ENDPOINT = "https://api.bber.unm.edu/api/bber-news?limit=3";
 const BBER_PUBLICATIONS_ENDPOINT =
-  "https://api.bber.unm.edu/api/bber-research/publications?limit=5";
+  "https://api.bber.unm.edu/api/bber-research/publications?limit=3";
 
 export type FeedState<T> = {
   status: "ready" | "empty" | "error";

@@ -22,8 +22,10 @@ export default async function PlaceholderRoutePage(
   return (
     <PlaceholderPage
       title={resolvedPage.node.title}
-      lead={`The ${resolvedPage.node.title} section is part of the BBER site structure and is ready to be filled with final content.`}
+      lead={`${resolvedPage.node.title} is part of the BBER website and will be available soon.`}
       trail={resolvedPage.trail}
+      statusTitle="Under Construction"
+      statusMessage={`The ${resolvedPage.node.title} page is currently under construction.`}
       childLinks={Object.values(getPageChildren(resolvedPage.node)).map(
         (childNode) => ({
           title: childNode.title,
