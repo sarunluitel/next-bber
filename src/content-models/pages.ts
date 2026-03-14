@@ -242,6 +242,39 @@ export type ResolvedPage = {
   trail: PageTrailEntry[];
 };
 
+export type NavigationBranchItem = {
+  key: string;
+  title: string;
+  url: string;
+  isOverview: boolean;
+  branch: NavigationBranch | null;
+};
+
+export type NavigationBranch = {
+  key: string;
+  title: string;
+  url: string;
+  items: NavigationBranchItem[];
+};
+
+export type SectionSidebarItem = {
+  title: string;
+  url: string;
+  isActive: boolean;
+};
+
+export type SectionSidebarModel = {
+  currentPage: PageNode;
+  parentPage: PageNode | null;
+  goBackTarget: {
+    title: string;
+    url: string;
+  };
+  items: SectionSidebarItem[];
+  mode: "children" | "siblings";
+  sectionTitle: string;
+};
+
 export function normalizePageUrl(url: string) {
   if (url === "/") {
     return url;
@@ -256,6 +289,56 @@ export function getPageChildren(pageNode: PageNode) {
 
 export function pageHasChildren(pageNode: PageNode) {
   return Object.keys(getPageChildren(pageNode)).length > 0;
+}
+
+function buildNavigationBranch(
+  key: string,
+  pageNode: PageNode,
+): NavigationBranch {
+  const childItems = Object.entries(getPageChildren(pageNode)).map(
+    ([childKey, childNode]) => ({
+      key: childNode.url,
+      title: childNode.title,
+      url: childNode.url,
+      isOverview: false,
+      branch: pageHasChildren(childNode)
+        ? buildNavigationBranch(childKey, childNode)
+        : null,
+    }),
+  );
+
+  return {
+    key,
+    title: pageNode.title,
+    url: pageNode.url,
+    items: [
+      {
+        key: `${pageNode.url}__overview`,
+        title: "Overview",
+        url: pageNode.url,
+        isOverview: true,
+        branch: null,
+      },
+      ...childItems,
+    ],
+  };
+}
+
+export function getNavigationBranch(
+  pageNode: PageNode,
+  pageKey = pageNode.url,
+) {
+  return buildNavigationBranch(pageKey, pageNode);
+}
+
+export function getPrimaryNavigationBranches(
+  pages: Record<string, PageNode> = Pages,
+) {
+  return Object.entries(pages).map(([key, node]) => ({
+    key,
+    node,
+    branch: pageHasChildren(node) ? getNavigationBranch(node, key) : null,
+  }));
 }
 
 export function flattenPages(
@@ -287,6 +370,82 @@ export function findPageByUrl(
 
 export function getPageBreadcrumbs(pathname: string) {
   return findPageByUrl(pathname)?.trail ?? [];
+}
+
+export function findParentPage(
+  pathname: string,
+  pages: Record<string, PageNode> = Pages,
+) {
+  const resolvedPage = findPageByUrl(pathname, pages);
+
+  if (!resolvedPage || resolvedPage.trail.length < 2) {
+    return null;
+  }
+
+  return resolvedPage.trail[resolvedPage.trail.length - 2] ?? null;
+}
+
+export function getSiblingPages(
+  pathname: string,
+  pages: Record<string, PageNode> = Pages,
+) {
+  const parentPageEntry = findParentPage(pathname, pages);
+
+  if (!parentPageEntry) {
+    return [];
+  }
+
+  return Object.values(getPageChildren(parentPageEntry.node));
+}
+
+function pageUrlMatchesPathname(pageNode: PageNode, pathname: string) {
+  return normalizePageUrl(pageNode.url) === normalizePageUrl(pathname);
+}
+
+export function getSectionSidebarModel(
+  pathname: string,
+  pages: Record<string, PageNode> = Pages,
+): SectionSidebarModel | null {
+  const resolvedPage = findPageByUrl(pathname, pages);
+
+  if (!resolvedPage) {
+    return null;
+  }
+
+  const currentPage = resolvedPage.node;
+  const parentPageEntry = findParentPage(pathname, pages);
+  const parentPage = parentPageEntry?.node ?? null;
+  const currentPageHasChildren = pageHasChildren(currentPage);
+  const sidebarSourcePage = currentPageHasChildren ? currentPage : parentPage;
+
+  if (!sidebarSourcePage) {
+    return null;
+  }
+
+  const items = Object.values(getPageChildren(sidebarSourcePage)).map(
+    (node) => ({
+      title: node.title,
+      url: node.url,
+      isActive: pageUrlMatchesPathname(node, pathname),
+    }),
+  );
+
+  return {
+    currentPage,
+    parentPage,
+    goBackTarget: parentPage
+      ? {
+          title: parentPage.title,
+          url: parentPage.url,
+        }
+      : {
+          title: Pages.Home.title,
+          url: Pages.Home.url,
+        },
+    items,
+    mode: currentPageHasChildren ? "children" : "siblings",
+    sectionTitle: sidebarSourcePage.title,
+  };
 }
 
 export function getStaticPageSlugs() {

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { findPageByUrl, getPageChildren, getStaticPageSlugs } from "pages";
+import { findPageByUrl, getStaticPageSlugs } from "pages";
 import { PlaceholderPage } from "@/components/site/placeholder-page";
 
 export const dynamicParams = false;
@@ -21,17 +21,12 @@ export default async function PlaceholderRoutePage(
 
   return (
     <PlaceholderPage
+      pathname={resolvedPage.node.url}
       title={resolvedPage.node.title}
       lead={`${resolvedPage.node.title} is part of the BBER website and will be available soon.`}
       trail={resolvedPage.trail}
       statusTitle="Under Construction"
       statusMessage={`The ${resolvedPage.node.title} page is currently under construction.`}
-      childLinks={Object.values(getPageChildren(resolvedPage.node)).map(
-        (childNode) => ({
-          title: childNode.title,
-          url: childNode.url,
-        }),
-      )}
     />
   );
 }

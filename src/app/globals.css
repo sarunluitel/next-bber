@@ -59,6 +59,7 @@
   --bber-stone: #6b7280;
   --bber-sand: #f4f1ea;
   --bber-border: #d9d2c7;
+  --site-max-width: 1440px;
 }
 
 @layer base {

@@ -15,6 +15,13 @@ The product is an economics research department website for BBER-style content a
 - trustworthy server/client boundaries
 - predictable debugging for agent workflows
 
+Deployment target:
+- This app is intended to be deployed at `https://bber.unm.edu`.
+- Treat `bber.unm.edu` as this application's own first-party host, not as an upstream site to depend on.
+- Do not hardcode `https://bber.unm.edu/...` for internal navigation, page links, images, downloads, or runtime fetches.
+- Prefer local route constants from `src/content-models/pages.ts`, root-relative URLs such as `/about/...`, and repo-owned assets in `public/`.
+- If a request currently points at the live `bber.unm.edu` site, assume it must be recreated locally or routed through this app unless a human explicitly confirms otherwise.
+
 This repository assumes:
 - **Next.js App Router** on a current canary line when intentionally adopted
 - Tailwind CSS for styling
@@ -193,6 +200,16 @@ This repo is expected to run with the Next.js MCP server so agents can inspect r
 
 ### Browser verification
 When a UI-affecting change is made, the agent should verify the result in a browser-capable workflow such as Playwright-backed validation when available.
+
+### Live BBER page recreation
+When asked to compare a page from `bber.unm.edu` and implement it in this codebase, the agent must inspect the live page in a browser and review the network requests before deciding what is local content versus CMS-delivered content.
+
+Rules:
+- Do not assume a page is static just because it looks editorial.
+- Identify which requests come from `api.bber.unm.edu` and treat those payloads as the CMS contract for that page.
+- Keep stable shell or low-churn content local only after confirming it is not coming from the live CMS.
+- After implementation, replace any temporary `https://bber.unm.edu/...` references with first-party local routes or repo-owned assets before handoff.
+- Apply this check before implementing or re-implementing recently added pages as well, including About section work.
 
 ### Human review posture
 Agents should optimize for diffs that are easy to review:

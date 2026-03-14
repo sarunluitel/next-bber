@@ -13,7 +13,7 @@ export default async function Home() {
 
   return (
     <div className="bg-[var(--bber-sand)]">
-      <section className="mx-auto w-full max-w-[1200px] px-4 pt-6 sm:px-6 lg:px-8 lg:pt-8">
+      <section className="mx-auto w-full max-w-[var(--site-max-width)] px-4 pt-6 sm:px-6 lg:px-8 lg:pt-8">
         <Image
           src={hero.src}
           alt={hero.alt}
@@ -24,7 +24,7 @@ export default async function Home() {
         />
       </section>
 
-      <section className="mx-auto flex w-full max-w-[1200px] flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <section className="mx-auto flex w-full max-w-[var(--site-max-width)] flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
         <div className="grid gap-8 lg:grid-cols-2">
           <FeedSection
             title={sections.news.title}

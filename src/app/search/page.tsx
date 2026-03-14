@@ -6,6 +6,7 @@ export default async function SearchPage(props: PageProps<"/search">) {
 
   return (
     <PlaceholderPage
+      pathname="/search"
       title="Search"
       lead={
         query

@@ -15,10 +15,12 @@ The frontend currently consumes these BBER CMS endpoints:
 1. `GET https://api.bber.unm.edu/api/bber-news?limit=3`
 2. `GET https://api.bber.unm.edu/api/bber-news/indexes`
 3. `GET https://api.bber.unm.edu/api/bber-news/?year=YYYY&month=M&limit=100`
-4. `GET https://api.bber.unm.edu/api/bber-research/publications?limit=5`
-5. `GET https://api.bber.unm.edu/api/bber-research/publications?featured=true`
-6. `GET https://api.bber.unm.edu/api/bber-research/publications/indexes`
-7. `GET https://api.bber.unm.edu/api/bber-research/publications?year=YYYY&category=ID&community=ID&limit=100`
+4. `GET https://api.bber.unm.edu/api/staff`
+5. `GET https://api.bber.unm.edu/api/directors`
+6. `GET https://api.bber.unm.edu/api/bber-research/publications?limit=5`
+7. `GET https://api.bber.unm.edu/api/bber-research/publications?featured=true`
+8. `GET https://api.bber.unm.edu/api/bber-research/publications/indexes`
+9. `GET https://api.bber.unm.edu/api/bber-research/publications?year=YYYY&category=ID&community=ID&limit=100`
 
 ## Required pipeline
 
@@ -90,6 +92,67 @@ Normalization rules:
   resolved against `https://api.bber.unm.edu`
 - entries without a valid title, date, or resolved link are dropped
 
+### `BberAboutPersonDirectoryPage`
+
+Used by `/about/staff` and `/about/directors`.
+
+- `path: string`
+- `title: string`
+- `lead: string`
+- `eyebrow: "About"`
+- `sidebarPath: string`
+- `kind: "people-directory"`
+- `currentPeople: AboutPersonSummary[]`
+- `pastPeople?: AboutPersonSummary[]`
+- `pastPeopleHeading?: string`
+
+Normalization rules:
+
+- staff records come from `GET /api/staff`
+- staff are split into `currentPeople` and `pastPeople`
+- `stoppedWorkingDate` null or absent means current employee
+- `stoppedWorkingDate` present means past employee
+- the staff page renders `pastPeople` inside a collapsed `Past Employees`
+  section, but those people still keep valid bio routes
+- past staff bio pages also show a `Past Employee` label under the person’s
+  role heading
+- `sortOrder` is used only for ordering; `sortOrder: 0` records are still valid
+  staff entries and must not be dropped
+- directors come from `GET /api/directors`
+- both collections are sorted by `sortOrder` descending to mirror the live site
+- portrait images prefer `image.formats.medium.url`, then smaller CMS formats,
+  then the root `image.url`, all resolved against `https://api.bber.unm.edu`
+- staff portrait URLs may come back under either `/api/files/**` or
+  `/uploads/**`, so both path families must be allowed by the Next image
+  configuration
+- excerpt text comes from the first non-heading paragraph in `description`
+
+### `BberAboutPersonProfilePage`
+
+Used by `/about/staff/[slug]` and `/about/directors/[slug]`.
+
+- `path: string`
+- `title: string`
+- `eyebrow: "About"`
+- `sidebarPath: string`
+- `kind: "person-profile"`
+- `directoryPath: string`
+- `directoryTitle: string`
+- `person: AboutPersonSummary`
+- `sections: AboutContentSection[]`
+
+Normalization rules:
+
+- profile content comes from the same upstream staff/director records as the
+  directory pages
+- `description` is split into paragraphs at blank lines before rendering
+- standalone Markdown links in the upstream description are normalized into
+  structured link rows
+- standalone Markdown headings such as `# In Memoriam ...` become section titles
+- director tenure labels are derived from `tenureStart` and `tenureEnd` as
+  `YYYY to YYYY` or `YYYY to Present`
+- profile routes are keyed by the upstream `slug`
+
 ### `BberNewsArchiveItem`
 
 Used by `/news`.
@@ -147,12 +210,16 @@ Normalization rules:
 - Homepage components must not parse raw CMS payloads.
 - Publications archive components must not parse raw CMS payloads or indexes.
 - News archive components must not parse raw CMS payloads or indexes.
+- Staff and director pages must not parse raw CMS payloads inside route or UI
+  components.
 - Incomplete entries should be excluded rather than partially guessed.
 - Feed failures must degrade to section-level empty or error states.
 - Local navigation and homepage chrome content are intentionally not CMS-backed
   at this stage.
 - Research landing copy is intentionally local even though the archive itself is
   CMS-backed.
+- The broader About section remains locally modeled, but staff and directors are
+  explicitly CMS-backed because the live site sources them from `api.bber.unm.edu`.
 
 ## Current implementation locations
 
@@ -161,5 +228,7 @@ Normalization rules:
 - rendering: homepage section components under `src/components/site/`
 - news archive fetches: `src/lib/cms/bber-news.ts`
 - news archive normalization: `src/content-models/bber-news.ts`
+- about people fetches: `src/lib/cms/bber-about.ts`
+- about people normalization: `src/content-models/bber-about-people.ts`
 - publications archive fetches: `src/lib/cms/bber-research.ts`
 - publications archive normalization: `src/content-models/bber-research.ts`

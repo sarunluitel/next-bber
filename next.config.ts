@@ -11,6 +11,13 @@ const nextConfig: NextConfig = {
         pathname: "/api/files/**",
         search: "",
       },
+      {
+        protocol: "https",
+        hostname: "api.bber.unm.edu",
+        port: "",
+        pathname: "/uploads/**",
+        search: "",
+      },
     ],
   },
 };

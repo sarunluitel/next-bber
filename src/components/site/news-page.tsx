@@ -33,7 +33,7 @@ export function NewsPageView({ content, data }: NewsPageViewProps) {
 
   return (
     <div className="bg-[var(--bber-sand)]">
-      <section className="mx-auto flex w-full max-w-[1200px] flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+      <section className="mx-auto flex w-full max-w-[var(--site-max-width)] flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
         <div className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--bber-red)]">
             News

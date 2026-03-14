@@ -95,3 +95,113 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 - **Validation:** `pnpm lint`, `pnpm build`, browser verification for `/news`, `/news?year=2025`, `/news?year=2025&month=4`, `/news?q=creative`, and live-site network inspection confirming the upstream month contract.
 - **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`, `docs/CMS_CONTRACT.md`
 - **Follow-up:** If BBER later exposes a dedicated server-side keyword search for news, move the local `q` filtering from the frontend adapter into the CMS query contract.
+
+## 2026-03-13 - Drive section sidebars from the shared page tree
+- **Status:** accepted
+- **Area:** architecture, routing, docs
+- **Context:** Nested section pages were using either placeholder-only content or route-specific navigation UI, which made the left-rail experience inconsistent across Data, Research, Subscribers, and About.
+- **Decision:** Extend `src/content-models/pages.ts` with parent, sibling, and sidebar-model helpers; add a shared `SectionSidebar` and `SectionPageShell`; and route both placeholder pages and real section pages through the same data-driven left-rail pattern.
+- **Why:** Keeping section navigation derived from the same `Pages` tree as the global header avoids duplicated route lists and makes the current page, sibling pages, child pages, and parent-page `Go Back` behavior consistent across the site.
+- **Validation:** `pnpm lint`, `pnpm build`, browser verification for `/data`, `/data/open-data`, `/data/open-data/unm`, `/research`, `/research/publications`, `/about/services`, `/subscribers/forunm`, mobile sidebar interaction, and Next.js MCP runtime error inspection on port `3000`.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`
+- **Follow-up:** When more real nested pages are implemented, keep them inside `SectionPageShell` so the section navigation stays centralized instead of reintroducing route-specific sidebars.
+
+## 2026-03-13 - Widen the shared site container for large screens
+- **Status:** accepted
+- **Area:** architecture, docs
+- **Context:** The shared layout shell was capped at `1200px`, which made the site feel artificially narrow on larger desktop displays and caused the homepage and section pages to occupy noticeably less than the available viewport width.
+- **Decision:** Introduce a shared `--site-max-width` root variable set to `1440px` and apply it across the header, footer, homepage, news page, and section-page shell.
+- **Why:** A single shared width token keeps the layout visually consistent while giving the site a more natural desktop footprint without stretching content to full-bleed widths.
+- **Validation:** `pnpm lint`, `pnpm build`, and Playwright verification on `/` at a `1600px` viewport confirming a rendered content width of `1440px`.
+- **Docs updated:** `docs/AGENT_NOTES.md`
+- **Follow-up:** If later pages need different reading widths for specialized content or data views, layer those exceptions inside page content areas instead of shrinking the shared site shell again.
+
+## 2026-03-13 - Implement the full About section as local structured content
+- **Status:** accepted
+- **Area:** architecture, routing, docs
+- **Context:** The About section was still being served by placeholder pages even though the live BBER site has a substantial set of static section pages, service leaf pages, staff and director directories, profile subpages, a helpful links directory, and a contact page.
+- **Decision:** Add a dedicated local About content model, a shared About page renderer, explicit `/about` and `/about/[...slug]` routes, and a small client-side mailto contact form. Keep the existing shared sidebar behavior by routing About pages through `SectionPageShell`, including service leaf pages and profile pages.
+- **Why:** The About section content is stable enough to live locally, and a content-model-driven renderer keeps long-form copy, profile data, and outbound links out of route files while still matching the live site structure closely.
+- **Validation:** `pnpm lint`, `pnpm build`, Playwright verification for `/about`, `/about/services`, `/about/services/research`, `/about/staff`, `/about/staff/michael-o-donnell`, `/about/directors`, `/about/helpfulLinks`, `/about/contact`, mobile verification for `/about/services/research` and `/about/contact`, and Next.js MCP runtime error inspection on port `3000`.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`
+- **Follow-up:** If the About section later moves into a CMS, keep the current local content model shapes as the normalization target instead of pushing raw remote content directly into the page renderer.
+
+## 2026-03-13 - Correct the About people boundary to use live CMS feeds
+- **Status:** accepted
+- **Area:** architecture, cms, routing, workflow, docs
+- **Context:** The first About implementation treated staff and directors as local structured content even though the live BBER site fetches those pages from `GET https://api.bber.unm.edu/api/staff` and `GET https://api.bber.unm.edu/api/directors`.
+- **Decision:** Re-implement `/about/staff`, `/about/directors`, and their bio pages through a dedicated server-side CMS adapter and normalization layer while keeping the rest of the About section local. Also update `AGENTS.md` so future BBER page recreation tasks require network inspection before deciding whether a page is static or CMS-backed.
+- **Why:** Staff and director data are an external CMS contract on the live site, and reproducing those pages locally would drift over time and hide the real source boundary that the frontend should preserve.
+- **Validation:** Live-site network inspection for `/about/staff` and `/about/directors`, `pnpm lint`, `pnpm build`, browser verification for `/about/staff`, `/about/staff/michael-o-donnell`, `/about/directors`, `/about/directors/jeffrey-mitchell`, and Next.js MCP runtime error inspection on port `3000`.
+- **Docs updated:** `AGENTS.md`, `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`, `docs/CMS_CONTRACT.md`
+- **Follow-up:** If additional About subpages are recreated from the live site, inspect network traffic first and preserve any upstream CMS contracts instead of assuming editorial pages are static.
+
+## 2026-03-13 - Make parent navigation items directly reachable
+- **Status:** accepted
+- **Area:** architecture, routing, docs
+- **Context:** The first shared header implementation treated parent navigation items as menu triggers, which made landing pages such as `/about` and `/about/services` effectively unreachable from the primary navigation unless a user guessed the URL or used a sidebar link.
+- **Decision:** Replace the trigger-only pattern with a split-link website navigation model across the shared header. Parent labels now navigate to their landing pages, adjacent chevrons open child menus, and every submenu begins with an `Overview` link derived from the same `Pages` tree.
+- **Why:** This matches common website navigation conventions, keeps parent landing pages discoverable, and preserves one data-driven source of truth for both top-level and nested navigation branches.
+- **Validation:** `pnpm lint`, `pnpm build`, Playwright verification for desktop navigation to `/about` and `/about/services`, nested `About > Services` submenu opening, mobile sheet navigation to `/about/services`, and Next.js MCP runtime error inspection on port `3000`.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`
+- **Follow-up:** If future information-architecture changes add deeper nesting, keep deriving the header structure from `pages.ts` instead of introducing route-local menu definitions.
+
+## 2026-03-13 - Remove duplicated local About people content and group past staff from CMS
+- **Status:** accepted
+- **Area:** architecture, cms, routing, docs
+- **Context:** The About route layer was already fetching staff and directors from the live CMS, but `about-content.ts` still contained duplicated local staff/director summaries and profile content. The staff page also needed to distinguish active and former employees from the upstream `stoppedWorkingDate` field.
+- **Decision:** Remove local staff and director directory/profile content from `about-content.ts`, keep those routes exclusively CMS-backed, and update the staff directory normalization to split people into current employees and a collapsed `Past Employees` section while keeping direct bio routes valid.
+- **Why:** This removes stale duplicate data from the local content model, keeps the CMS boundary honest, and matches the real staff lifecycle represented by the upstream payload.
+- **Validation:** `pnpm lint`, `pnpm build`, browser verification for `/about/staff`, expanding the `Past Employees` section, direct navigation to a valid past employee bio route, `/about/directors`, and an invalid `/about/staff/[slug]` not-found check.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`, `docs/CMS_CONTRACT.md`
+- **Follow-up:** If the CMS later introduces separate active and alumni endpoints, keep the current grouped directory model as the normalization target rather than pushing endpoint-specific shapes into the UI.
+
+## 2026-03-13 - Add former-staff label to past employee bio pages
+- **Status:** accepted
+- **Area:** cms, docs
+- **Context:** Past staff were already grouped correctly on `/about/staff`, but their individual bio pages did not visibly indicate that they are former employees.
+- **Decision:** Carry a former-staff label through the CMS-normalized staff profile model and render `Past Employee` on staff bio pages only when `stoppedWorkingDate` is present.
+- **Why:** This keeps former staff status visible on direct profile pages without adding any corresponding label to current employees.
+- **Validation:** `pnpm lint`, `pnpm build`, and browser verification for `/about/staff/wayne-rudnick`.
+- **Docs updated:** `docs/CMS_CONTRACT.md`, `docs/AGENT_NOTES.md`
+- **Follow-up:** If the design later adds richer employment-status metadata, keep it CMS-derived rather than hardcoding route-specific labels.
+
+## 2026-03-13 - Keep sortOrder-zero staff entries in the CMS-backed staff directory
+- **Status:** accepted
+- **Area:** cms, docs
+- **Context:** The `/about/staff` page was server-fetching live CMS data correctly, but the normalization layer was discarding every staff record whose `sortOrder` was `0`, which removed a large portion of the feed from both the directory and generated profile routes.
+- **Decision:** Treat `sortOrder` as an ordering hint only. Records with `sortOrder: 0` remain valid staff entries, and ties now fall back to alphabetical ordering by name.
+- **Why:** The live `GET /api/staff` feed currently contains many valid current and past staff records with `sortOrder: 0`, so using that field as a validity gate caused silent data loss.
+- **Validation:** Live feed inspection showing 24 valid staff records with only 11 previously retained, `pnpm lint`, `pnpm build`, and browser verification for `/about/staff` confirming previously omitted staff now render.
+- **Docs updated:** `docs/CMS_CONTRACT.md`, `docs/AGENT_NOTES.md`
+- **Follow-up:** If BBER later formalizes directory ordering semantics, update the normalizer to match the upstream contract without turning ordering fields into required-presence validation.
+
+## 2026-03-13 - Normalize people-card preview height and action alignment
+- **Status:** accepted
+- **Area:** architecture, docs
+- **Context:** Staff and director cards were using variable-length bio previews, which caused uneven card heights and left the `View Bio` button at different vertical positions across a row.
+- **Decision:** Increase the normalized preview budget modestly, clamp the rendered preview text to a consistent line count, and make the card body stretch so the `View Bio` action anchors to the bottom of each card.
+- **Why:** This preserves a richer biography preview while keeping the card grid visually aligned and easier to scan.
+- **Validation:** `pnpm lint`, `pnpm build`, Playwright verification for `/about/staff` and `/about/directors`, plus DOM checks confirming the first three `View Bio` buttons share the same vertical position on desktop.
+- **Docs updated:** `docs/AGENT_NOTES.md`
+- **Follow-up:** If the design later needs different preview density on mobile versus desktop, adjust the clamp count rather than reintroducing variable action placement.
+
+## 2026-03-13 - Build people-card previews from multiple biography paragraphs
+- **Status:** accepted
+- **Area:** cms, docs
+- **Context:** The first people-card preview normalizer only used the first biography paragraph, which made short opening paragraphs leave visually thin previews even when the next paragraph contained more useful summary content.
+- **Decision:** Update the staff/director excerpt normalizer to accumulate multiple non-heading, non-link biography paragraphs until the preview target length is reached, then trim once at the end.
+- **Why:** This keeps previews fuller and more representative of the biography while preserving the aligned card layout.
+- **Validation:** `pnpm lint`, `pnpm build`, Playwright verification on `/about/staff`, and DOM checks confirming aligned `View Bio` buttons after the new preview logic.
+- **Docs updated:** `docs/AGENT_NOTES.md`
+- **Follow-up:** If later sections need more editorial control over previews, add an explicit CMS summary field instead of relying on paragraph accumulation heuristics.
+
+## 2026-03-13 - Remove production-site coupling from local About content
+- **Status:** accepted
+- **Area:** routing, architecture, docs
+- **Context:** The local About content model still hardcoded `https://bber.unm.edu/...` for stable image assets and for internal page links like research publications and presentations, even though this application is intended to replace the current site at that same hostname.
+- **Decision:** Move stable About assets into `public/bber/about/`, switch internal About page links to the local route tree in `src/content-models/pages.ts`, remove the now-unused `bber.unm.edu` image remote pattern from `next.config.ts`, and update agent guidance to treat `bber.unm.edu` as the deployment host instead of an upstream dependency.
+- **Why:** First-party pages and stable shell assets should resolve from this codebase after deployment, not from the site being replaced.
+- **Validation:** `pnpm lint`, `pnpm build`, browser verification for `/about/services/research` confirming the bottom links stay on `localhost:3000`, plus repository search for remaining `https://bber.unm.edu` references.
+- **Docs updated:** `AGENTS.md`, `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`
+- **Follow-up:** Continue replacing remaining hardcoded `bber.unm.edu` references only when there is a confirmed local route or repo-owned asset to target, rather than guessing missing routes.

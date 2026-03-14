@@ -3,6 +3,7 @@ import { PlaceholderPage } from "@/components/site/placeholder-page";
 export default function NotFound() {
   return (
     <PlaceholderPage
+      pathname="/404"
       title="Page Not Found"
       lead="The page you requested could not be found."
       statusTitle="Page Not Found"

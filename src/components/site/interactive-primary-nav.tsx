@@ -1,15 +1,21 @@
 "use client";
 
-import { MenuIcon, SearchIcon } from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import {
-  getPageChildren,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  MenuIcon,
+  SearchIcon,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  getPrimaryNavigationBranches,
+  type NavigationBranch,
+  type NavigationBranchItem,
   normalizePageUrl,
-  type PageNode,
   Pages,
-  pageHasChildren,
 } from "pages";
+import { useEffect, useRef, useState } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -18,16 +24,6 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Menubar,
-  MenubarContent,
-  MenubarItem,
-  MenubarMenu,
-  MenubarSub,
-  MenubarSubContent,
-  MenubarSubTrigger,
-  MenubarTrigger,
-} from "@/components/ui/menubar";
 import {
   Sheet,
   SheetContent,
@@ -41,6 +37,9 @@ import { cn } from "@/lib/utils";
 type InteractivePrimaryNavProps = {
   siteTitle: string;
 };
+
+const DESKTOP_OPEN_DELAY_MS = 120;
+const DESKTOP_CLOSE_DELAY_MS = 180;
 
 function isActivePath(currentPathname: string, candidateUrl: string) {
   const normalizedCurrentPathname = normalizePageUrl(currentPathname);
@@ -56,145 +55,337 @@ function isActivePath(currentPathname: string, candidateUrl: string) {
   );
 }
 
-function DesktopMenuItem({
-  currentPathname,
-  node,
-}: {
-  currentPathname: string;
-  node: PageNode;
-}) {
-  const router = useRouter();
-  const isActive = isActivePath(currentPathname, node.url);
-
-  if (!pageHasChildren(node)) {
+function branchItemIsActive(
+  currentPathname: string,
+  branchItem: NavigationBranchItem,
+) {
+  if (branchItem.isOverview) {
     return (
-      <Link
-        href={node.url}
-        className={cn(
-          "rounded-md px-3 py-2 text-[1.05rem] font-semibold text-[var(--bber-red)] transition-colors hover:bg-[var(--bber-sand)]",
-          isActive ? "bg-[var(--bber-sand)]" : "",
-        )}
-      >
-        {node.title}
-      </Link>
+      normalizePageUrl(currentPathname) === normalizePageUrl(branchItem.url)
     );
   }
 
-  return (
-    <MenubarMenu>
-      <MenubarTrigger
-        className={cn(
-          "rounded-md px-3 py-2 text-[1.05rem] font-semibold text-[var(--bber-red)] hover:bg-[var(--bber-sand)]",
-          isActive ? "bg-[var(--bber-sand)]" : "",
-        )}
-      >
-        {node.title}
-      </MenubarTrigger>
-      <MenubarContent className="min-w-56 border border-[var(--bber-border)] bg-white">
-        {Object.values(getPageChildren(node)).map((childNode) => {
-          if (pageHasChildren(childNode)) {
-            return <DesktopSubmenuItem key={childNode.url} node={childNode} />;
-          }
+  if (branchItem.branch) {
+    return isActivePath(currentPathname, branchItem.branch.url);
+  }
 
-          return (
-            <MenubarItem
-              key={childNode.url}
-              onClick={() => router.push(childNode.url)}
-              className="cursor-pointer text-[var(--bber-ink)]"
-            >
-              {childNode.title}
-            </MenubarItem>
-          );
-        })}
-      </MenubarContent>
-    </MenubarMenu>
-  );
+  return isActivePath(currentPathname, branchItem.url);
 }
 
-function DesktopSubmenuItem({ node }: { node: PageNode }) {
-  const router = useRouter();
-
-  return (
-    <MenubarSub>
-      <MenubarSubTrigger className="cursor-default text-[var(--bber-ink)]">
-        {node.title}
-      </MenubarSubTrigger>
-      <MenubarSubContent className="min-w-56 border border-[var(--bber-border)] bg-white">
-        {Object.values(getPageChildren(node)).map((childNode) => {
-          if (pageHasChildren(childNode)) {
-            return <DesktopSubmenuItem key={childNode.url} node={childNode} />;
-          }
-
-          return (
-            <MenubarItem
-              key={childNode.url}
-              onClick={() => router.push(childNode.url)}
-              className="cursor-pointer text-[var(--bber-ink)]"
-            >
-              {childNode.title}
-            </MenubarItem>
-          );
-        })}
-      </MenubarSubContent>
-    </MenubarSub>
-  );
-}
-
-function MobileAccordionMenu({
+function DesktopLinkItem({
   currentPathname,
-  node,
+  depth,
+  item,
+  onNavigate,
+}: {
+  currentPathname: string;
+  depth: number;
+  item: NavigationBranchItem;
+  onNavigate: () => void;
+}) {
+  const isActive = branchItemIsActive(currentPathname, item);
+
+  return (
+    <Link
+      href={item.url}
+      onClick={onNavigate}
+      className={cn(
+        "block rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        depth === 0
+          ? "text-[var(--bber-red)] hover:bg-[var(--bber-sand)]"
+          : "text-[var(--bber-ink)] hover:bg-[var(--bber-sand)] hover:text-[var(--bber-red)]",
+        item.isOverview
+          ? "border border-[var(--bber-border)] bg-[var(--bber-sand)]/60"
+          : "",
+        isActive ? "bg-[var(--bber-sand)] text-[var(--bber-red)]" : "",
+      )}
+    >
+      {item.title}
+    </Link>
+  );
+}
+
+function DesktopBranchMenu({
+  branch,
+  currentPathname,
   depth = 0,
+  onNavigate,
 }: {
+  branch: NavigationBranch;
   currentPathname: string;
-  node: PageNode;
   depth?: number;
+  onNavigate: () => void;
 }) {
-  const isActive = isActivePath(currentPathname, node.url);
+  const [isOpen, setIsOpen] = useState(false);
+  const branchRef = useRef<HTMLDivElement | null>(null);
+  const openTimeoutRef = useRef<number | null>(null);
+  const closeTimeoutRef = useRef<number | null>(null);
+  const isActive = isActivePath(currentPathname, branch.url);
 
-  if (!pageHasChildren(node)) {
-    return (
-      <Link
-        href={node.url}
+  const clearTimers = () => {
+    if (openTimeoutRef.current) {
+      window.clearTimeout(openTimeoutRef.current);
+      openTimeoutRef.current = null;
+    }
+
+    if (closeTimeoutRef.current) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  };
+
+  const openMenu = () => {
+    clearTimers();
+    setIsOpen(true);
+  };
+
+  const closeMenu = () => {
+    clearTimers();
+    setIsOpen(false);
+  };
+
+  const scheduleOpen = () => {
+    clearTimers();
+    openTimeoutRef.current = window.setTimeout(() => {
+      setIsOpen(true);
+    }, DESKTOP_OPEN_DELAY_MS);
+  };
+
+  const scheduleClose = () => {
+    clearTimers();
+    closeTimeoutRef.current = window.setTimeout(() => {
+      setIsOpen(false);
+    }, DESKTOP_CLOSE_DELAY_MS);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (openTimeoutRef.current) {
+        window.clearTimeout(openTimeoutRef.current);
+      }
+
+      if (closeTimeoutRef.current) {
+        window.clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!branchRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handlePointerDown);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+    };
+  }, [isOpen]);
+
+  const handleNavigate = () => {
+    closeMenu();
+    onNavigate();
+  };
+
+  return (
+    <section
+      ref={branchRef}
+      aria-label={`${branch.title} navigation group`}
+      className="relative"
+      onMouseEnter={scheduleOpen}
+      onMouseLeave={scheduleClose}
+    >
+      <div
         className={cn(
-          "block rounded-md px-3 py-2 text-sm font-medium text-[var(--bber-ink)] transition-colors hover:bg-[var(--bber-sand)] hover:text-[var(--bber-red)]",
-          isActive ? "bg-[var(--bber-sand)] text-[var(--bber-red)]" : "",
-          depth > 0 ? "ml-3 border-l border-[var(--bber-border)] pl-4" : "",
+          "flex items-center rounded-lg transition-colors",
+          depth === 0 ? "gap-0.5" : "gap-1 bg-white",
+          isActive || isOpen ? "bg-[var(--bber-sand)]" : "",
         )}
       >
-        {node.title}
-      </Link>
-    );
-  }
+        <Link
+          href={branch.url}
+          onClick={handleNavigate}
+          className={cn(
+            "rounded-lg px-3 py-2 font-semibold transition-colors focus-visible:outline-none",
+            depth === 0
+              ? "text-[1.05rem] text-[var(--bber-red)] hover:bg-[var(--bber-sand)]"
+              : "flex-1 text-sm text-[var(--bber-ink)] hover:text-[var(--bber-red)]",
+          )}
+        >
+          {branch.title}
+        </Link>
+        <button
+          type="button"
+          aria-controls={`desktop-nav-${branch.key}`}
+          aria-expanded={isOpen}
+          aria-label={`Open ${branch.title} submenu`}
+          onClick={() => {
+            if (isOpen) {
+              closeMenu();
+              return;
+            }
+
+            openMenu();
+          }}
+          onFocus={openMenu}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.stopPropagation();
+              closeMenu();
+            }
+          }}
+          className={cn(
+            "inline-flex size-7 items-center justify-center rounded-lg text-[var(--bber-red)] transition-colors hover:bg-[var(--bber-sand)] hover:text-[var(--bber-red)]",
+            depth > 0
+              ? "text-[var(--bber-ink)] hover:text-[var(--bber-red)]"
+              : "",
+          )}
+        >
+          {isOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
+        </button>
+      </div>
+
+      {isOpen ? (
+        <div
+          id={`desktop-nav-${branch.key}`}
+          className={cn(
+            "absolute z-50 min-w-64 overflow-visible rounded-xl border border-[var(--bber-border)] bg-white p-2 shadow-xl",
+            depth === 0 ? "top-full left-0 mt-3" : "top-0 left-full ml-2",
+          )}
+        >
+          <div className="flex flex-col gap-1">
+            {branch.items.map((item) => {
+              if (item.branch) {
+                return (
+                  <DesktopBranchMenu
+                    key={`${item.key}-${currentPathname}`}
+                    branch={item.branch}
+                    currentPathname={currentPathname}
+                    depth={depth + 1}
+                    onNavigate={onNavigate}
+                  />
+                );
+              }
+
+              return (
+                <DesktopLinkItem
+                  key={item.key}
+                  currentPathname={currentPathname}
+                  depth={depth + 1}
+                  item={item}
+                  onNavigate={handleNavigate}
+                />
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function MobileLinkItem({
+  currentPathname,
+  depth,
+  item,
+  onNavigate,
+}: {
+  currentPathname: string;
+  depth: number;
+  item: NavigationBranchItem;
+  onNavigate: () => void;
+}) {
+  const isActive = branchItemIsActive(currentPathname, item);
+
+  return (
+    <Link
+      href={item.url}
+      onClick={onNavigate}
+      className={cn(
+        "block rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        depth > 0 ? "ml-3 border-l border-[var(--bber-border)] pl-4" : "",
+        item.isOverview
+          ? "bg-[var(--bber-sand)]/60 text-[var(--bber-red)]"
+          : "text-[var(--bber-ink)] hover:bg-[var(--bber-sand)] hover:text-[var(--bber-red)]",
+        isActive ? "bg-[var(--bber-sand)] text-[var(--bber-red)]" : "",
+      )}
+    >
+      {item.title}
+    </Link>
+  );
+}
+
+function MobileBranchMenu({
+  branch,
+  currentPathname,
+  depth = 0,
+  onNavigate,
+}: {
+  branch: NavigationBranch;
+  currentPathname: string;
+  depth?: number;
+  onNavigate: () => void;
+}) {
+  const isActive = isActivePath(currentPathname, branch.url);
 
   return (
     <Accordion multiple className="w-full">
       <AccordionItem
-        value={node.url}
-        className="border-b border-[var(--bber-border)]"
+        value={branch.key}
+        className={cn(
+          "border-b border-[var(--bber-border)]",
+          depth > 0 ? "ml-3" : "",
+        )}
       >
-        <AccordionTrigger
-          className={cn(
-            "px-3 py-3 text-sm font-semibold text-[var(--bber-red)] hover:no-underline",
-            depth > 0 ? "ml-3 pl-4" : "",
-          )}
-        >
-          {node.title}
-        </AccordionTrigger>
-        <AccordionContent className="space-y-2 pb-3">
+        <div className="flex items-center gap-2 py-1">
           <Link
-            href={node.url}
-            className="ml-3 block rounded-md border-l border-[var(--bber-border)] px-4 py-2 text-sm font-medium text-[var(--bber-ink)] hover:bg-[var(--bber-sand)] hover:text-[var(--bber-red)]"
+            href={branch.url}
+            onClick={onNavigate}
+            className={cn(
+              "flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+              depth === 0 ? "text-[var(--bber-red)]" : "text-[var(--bber-ink)]",
+              isActive
+                ? "bg-[var(--bber-sand)] text-[var(--bber-red)]"
+                : "hover:bg-[var(--bber-sand)] hover:text-[var(--bber-red)]",
+            )}
           >
-            Overview
+            {branch.title}
           </Link>
-          {Object.values(getPageChildren(node)).map((childNode) => (
-            <MobileAccordionMenu
-              key={childNode.url}
-              currentPathname={currentPathname}
-              node={childNode}
-              depth={depth + 1}
-            />
-          ))}
+          <AccordionTrigger
+            className="h-10 flex-none rounded-lg border border-[var(--bber-border)] px-3 py-0 text-[var(--bber-red)] hover:bg-[var(--bber-sand)] hover:no-underline"
+            aria-label={`Toggle ${branch.title} submenu`}
+          />
+        </div>
+        <AccordionContent className="pb-3">
+          <div className="flex flex-col gap-1">
+            {branch.items.map((item) => {
+              if (item.branch) {
+                return (
+                  <MobileBranchMenu
+                    key={item.key}
+                    branch={item.branch}
+                    currentPathname={currentPathname}
+                    depth={depth + 1}
+                    onNavigate={onNavigate}
+                  />
+                );
+              }
+
+              return (
+                <MobileLinkItem
+                  key={item.key}
+                  currentPathname={currentPathname}
+                  depth={depth + 1}
+                  item={item}
+                  onNavigate={onNavigate}
+                />
+              );
+            })}
+          </div>
         </AccordionContent>
       </AccordionItem>
     </Accordion>
@@ -205,20 +396,47 @@ export function InteractivePrimaryNav({
   siteTitle,
 }: InteractivePrimaryNavProps) {
   const pathname = usePathname();
-  const topLevelPages = Object.values(Pages);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const topLevelPages = getPrimaryNavigationBranches(Pages);
+
+  useEffect(() => {
+    if (pathname) {
+      setIsSheetOpen(false);
+    }
+  }, [pathname]);
 
   return (
     <>
       <div className="hidden items-center gap-6 lg:flex">
-        <Menubar className="h-auto gap-1 rounded-none border-none bg-transparent p-0 shadow-none ring-0">
-          {topLevelPages.map((pageNode) => (
-            <DesktopMenuItem
-              key={pageNode.url}
-              currentPathname={pathname}
-              node={pageNode}
-            />
-          ))}
-        </Menubar>
+        <nav aria-label="Primary" className="flex items-center gap-2">
+          {topLevelPages.map((pageEntry) => {
+            if (!pageEntry.branch) {
+              return (
+                <Link
+                  key={pageEntry.node.url}
+                  href={pageEntry.node.url}
+                  className={cn(
+                    "rounded-lg px-3 py-2 text-[1.05rem] font-semibold text-[var(--bber-red)] transition-colors hover:bg-[var(--bber-sand)]",
+                    isActivePath(pathname, pageEntry.node.url)
+                      ? "bg-[var(--bber-sand)]"
+                      : "",
+                  )}
+                >
+                  {pageEntry.node.title}
+                </Link>
+              );
+            }
+
+            return (
+              <DesktopBranchMenu
+                key={`${pageEntry.node.url}-${pathname}`}
+                branch={pageEntry.branch}
+                currentPathname={pathname}
+                onNavigate={() => undefined}
+              />
+            );
+          })}
+        </nav>
 
         <form
           action="/search"
@@ -243,7 +461,7 @@ export function InteractivePrimaryNav({
       </div>
 
       <div className="flex lg:hidden">
-        <Sheet>
+        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
           <SheetTrigger
             render={
               <Button
@@ -288,15 +506,36 @@ export function InteractivePrimaryNav({
                 </Button>
               </form>
 
-              <div className="space-y-1">
-                {topLevelPages.map((pageNode) => (
-                  <MobileAccordionMenu
-                    key={pageNode.url}
-                    currentPathname={pathname}
-                    node={pageNode}
-                  />
-                ))}
-              </div>
+              <nav aria-label="Mobile primary" className="flex flex-col gap-1">
+                {topLevelPages.map((pageEntry) => {
+                  if (!pageEntry.branch) {
+                    return (
+                      <Link
+                        key={pageEntry.node.url}
+                        href={pageEntry.node.url}
+                        onClick={() => setIsSheetOpen(false)}
+                        className={cn(
+                          "rounded-lg px-3 py-2 text-sm font-semibold text-[var(--bber-ink)] transition-colors hover:bg-[var(--bber-sand)] hover:text-[var(--bber-red)]",
+                          isActivePath(pathname, pageEntry.node.url)
+                            ? "bg-[var(--bber-sand)] text-[var(--bber-red)]"
+                            : "",
+                        )}
+                      >
+                        {pageEntry.node.title}
+                      </Link>
+                    );
+                  }
+
+                  return (
+                    <MobileBranchMenu
+                      key={pageEntry.node.url}
+                      branch={pageEntry.branch}
+                      currentPathname={pathname}
+                      onNavigate={() => setIsSheetOpen(false)}
+                    />
+                  );
+                })}
+              </nav>
             </div>
           </SheetContent>
         </Sheet>

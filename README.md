@@ -2,7 +2,7 @@
 
 This repository is a Next.js App Router implementation of the UNM Bureau of
 Business and Economic Research website, starting with a close recreation of the
-homepage at [bber.unm.edu](https://bber.unm.edu/).
+homepage now hosted by this application at [bber.unm.edu](https://bber.unm.edu/).
 
 ## Current scope
 
@@ -10,11 +10,18 @@ The app currently includes:
 
 - a reusable site shell with shared header and footer
 - a fully implemented homepage
+- a fully implemented About section, including static services/history/helpful
+  links/contact pages plus live CMS-backed staff and director directories and
+  bio pages
 - a live CMS-backed news archive at `/news`
 - a local-content research landing page at `/research`
 - a live CMS-backed publications page at `/research/publications`
 - live server-side CMS feeds for homepage news and publications
 - a local `pages.ts` site tree used for navigation and placeholder routes
+- a shared data-driven section sidebar for nested pages under Data, Research,
+  Subscribers, and About
+- a split-link primary navigation pattern so parent sections like `/about` and
+  `/about/services` are directly reachable while still exposing child menus
 - placeholder pages for the current navigation structure
 - a search UI shell routed to a local placeholder page
 
@@ -25,12 +32,24 @@ Stable site structure and homepage chrome content live locally:
 - `src/content-models/pages.ts`
 - `src/content-models/homepage-content.ts`
 - `src/content-models/research-content.ts`
+- `src/content-models/about-content.ts`
+- `src/content-models/bber-about-people.ts`
+
+Production-host rule:
+
+- `https://bber.unm.edu` is the deployment host for this app, not an external
+  dependency.
+- Internal page links, downloads, and stable imagery should resolve through
+  local routes or `public/` assets instead of hardcoded absolute
+  `https://bber.unm.edu/...` URLs.
 
 Live CMS feeds currently come from:
 
 - `https://api.bber.unm.edu/api/bber-news?limit=3`
 - `https://api.bber.unm.edu/api/bber-news/indexes`
 - `https://api.bber.unm.edu/api/bber-news/?year=YYYY&month=M&limit=100`
+- `https://api.bber.unm.edu/api/staff`
+- `https://api.bber.unm.edu/api/directors`
 - `https://api.bber.unm.edu/api/bber-research/publications?limit=5`
 - `https://api.bber.unm.edu/api/bber-research/publications?featured=true`
 - `https://api.bber.unm.edu/api/bber-research/publications/indexes`
@@ -57,11 +76,25 @@ pnpm build
 ## Notes
 
 - Navigation routes are powered by the local page tree, not a CMS.
+- Parent items in the global header are both landing pages and menu groups:
+  clicking the label navigates to the page, while the chevron opens the child
+  menu with an `Overview` link first.
+- Section sidebars are also powered by the local page tree, so section landing
+  pages and leaf pages share one consistent navigation pattern.
 - Shared imagery used by the homepage shell and research overview page is stored
   in `public/bber/`.
+- Stable About page imagery that previously referenced the live site directly is
+  now stored locally under `public/bber/about/`.
+- Static About pages are local-content pages rendered through a dedicated About
+  route layer, while staff and director directories/bio pages are fetched from
+  the live CMS through the same route layer.
+- The staff directory is split from the CMS feed into current employees and a
+  collapsed `Past Employees` section based on `stoppedWorkingDate`.
 - Homepage feed failures are handled with section-level empty or error states so
   the page still renders cleanly.
 - News archive filters are URL-driven and mirror the live BBER year/month API
   contract.
 - Publications filters are URL-driven so the page can be linked directly to a
   filtered archive view.
+- The contact page uses a client-side mailto form for demo-safe interaction
+  without introducing a backend email dependency.

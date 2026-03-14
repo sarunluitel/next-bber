@@ -43,7 +43,7 @@ export function SiteFooter() {
 
   return (
     <footer className="bg-white">
-      <div className="mx-auto w-full max-w-[1200px] px-4 pt-2 pb-10 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-[var(--site-max-width)] px-4 pt-2 pb-10 sm:px-6 lg:px-8">
         <Separator className="bg-[var(--bber-border)]" />
         <div className="flex flex-col items-center gap-5 pt-6 text-center">
           <p className="text-sm leading-7 text-[var(--bber-ink)]/80">

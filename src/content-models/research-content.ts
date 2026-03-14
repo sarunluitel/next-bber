@@ -1,5 +1,3 @@
-import { Pages } from "pages";
-
 export const researchPageContent = {
   title: "Research",
   lead: "For 75 years, BBER has provided economic data and forecasting to help state and local governments, business leaders, non-profit organizations, and community leaders identify and understand economic trends shaping New Mexico.",
@@ -25,23 +23,6 @@ export const researchPageContent = {
     width: 625,
     height: 625,
   },
-  sectionLinks: [
-    {
-      title: "Publications",
-      description: "Browse featured reports and filter the archive by topic.",
-      url: Pages.Research.children.Publications.url,
-    },
-    {
-      title: "Presentation",
-      description: "Review talks, speaking materials, and presentation work.",
-      url: Pages.Research.children.Presentation.url,
-    },
-    {
-      title: "Projects",
-      description: "Explore commissioned studies and long-form research work.",
-      url: Pages.Research.children.Projects.url,
-    },
-  ],
 } as const;
 
 export const publicationsPageContent = {
