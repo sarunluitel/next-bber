@@ -131,6 +131,21 @@ pnpm lint
 pnpm build
 ```
 
+## Deployment
+
+AWS Amplify Gen 2 can use the root [amplify.yml](/Users/sarunsair/Documents/Projects/next-bber/amplify.yml) build
+spec in this repo. It enables Corepack, installs dependencies with `pnpm`,
+builds the Next.js app, publishes the `.next` output, and caches both the
+local pnpm store and Next.js build cache between deploys.
+
+Current deployment caveat:
+
+- The repo is pinned to Next.js `16.2.0-canary.94`, while AWS Amplify's
+  published SSR support currently documents Next.js `12` through `15`. The
+  included build spec is the closest supported shape for this app, but the
+  hosting runtime may still need a future Amplify update or a move off Next 16
+  canary before production deployment is reliable.
+
 ## Notes
 
 - Navigation routes are powered by the local page tree, not a CMS.

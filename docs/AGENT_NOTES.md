@@ -16,6 +16,29 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 
 ---
 
+## 2026-03-15 - Add an AWS Amplify Gen 2 build spec
+- **Status:** accepted
+- **Area:** build, docs
+- **Context:** The app is being prepared for AWS Amplify Gen 2 deployment, but
+  the repo did not yet include a first-party build spec for the current
+  Next.js and `pnpm` setup.
+- **Decision:** Add a root `amplify.yml` that enables Corepack, configures a
+  local pnpm store for cacheable installs, runs `pnpm install --frozen-lockfile`
+  and `pnpm build`, publishes `.next`, and caches both the pnpm store and
+  Next.js build cache.
+- **Why:** Keeping the Amplify build contract in-repo makes deployment
+  behavior explicit and reviewable alongside the application source.
+- **Validation:** Manual review of the generated `amplify.yml` against the
+  current repo package manager and build output layout.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`,
+  `docs/ARCHITECTURE.md`
+- **Follow-up:** The app currently targets Next.js `16.2.0-canary.94`, so
+  verify Amplify hosting compatibility before production cutover because the
+  published AWS SSR support matrix still trails the framework version used in
+  this repo.
+
+---
+
 ## 2026-03-15 - Implement the `/data` section landing page with live previews
 - **Status:** accepted
 - **Area:** routing, visualization, architecture, docs

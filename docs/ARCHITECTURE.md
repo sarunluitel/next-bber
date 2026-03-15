@@ -11,6 +11,18 @@ The app is expected to ship on `https://bber.unm.edu`, so that hostname should
 be treated as the app's own production origin rather than as an external site
 dependency.
 
+## Deployment shape
+
+- The repository now includes a root
+  [amplify.yml](/Users/sarunsair/Documents/Projects/next-bber/amplify.yml)
+  build spec for AWS Amplify Gen 2 hosting.
+- The spec assumes the current single-app layout, enables Corepack, installs
+  dependencies with `pnpm`, builds the app with `pnpm build`, publishes the
+  `.next` output, and caches both `.pnpm-store` and `.next/cache`.
+- The app currently runs on Next.js `16.2.0-canary.94`, so Amplify deployment
+  remains a compatibility risk until AWS publishes SSR support beyond Next.js
+  `15` or the app is moved off the current canary line.
+
 ## Current architectural shape
 
 ### Shared site shell
