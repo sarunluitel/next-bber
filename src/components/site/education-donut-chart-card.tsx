@@ -17,7 +17,11 @@ export function EducationDonutChartCard({
       title={card.title}
       description={card.description}
       sourceLine={card.sourceLine}
-      actions={<DataDownloadMenu chartId={card.download.chartId} />}
+      actions={
+        <div className="flex w-full items-center justify-end">
+          <DataDownloadMenu chartId={card.download.chartId} />
+        </div>
+      }
     >
       <EducationDonutChart
         ariaLabel={`${card.title} for ${card.geographyLabel} in ${card.yearLabel}`}

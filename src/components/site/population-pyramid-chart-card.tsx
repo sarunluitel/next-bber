@@ -59,7 +59,7 @@ export function PopulationPyramidChartCard({
       description={card.description}
       sourceLine={card.sourceLine}
       actions={
-        <>
+        <div className="flex w-full flex-wrap items-center justify-between gap-2">
           <ChartPlaybackControls
             isPlaying={isPlaying}
             onTogglePlayback={() =>
@@ -83,7 +83,7 @@ export function PopulationPyramidChartCard({
             }}
           />
           <DataDownloadMenu chartId={card.download.chartId} />
-        </>
+        </div>
       }
     >
       {currentFrame ? (

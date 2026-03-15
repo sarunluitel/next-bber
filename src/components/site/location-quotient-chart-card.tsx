@@ -59,52 +59,54 @@ export function LocationQuotientChartCard({
       description={card.description}
       sourceLine={card.sourceLine}
       actions={
-        <>
-          <ChartVariableMenu
-            selectedLabel={selectedMetric?.label ?? "Variable"}
-            options={card.metrics.map((metric) => ({
-              value: metric.value,
-              label: metric.label,
-            }))}
-            onValueChange={(nextMetric) => {
-              setIsPlaying(false);
-              setSelectedMetricValue(nextMetric as typeof card.defaultMetric);
-            }}
-          />
-          <ChartPlaybackControls
-            isPlaying={isPlaying}
-            onTogglePlayback={() =>
-              setIsPlaying((currentValue) => !currentValue)
-            }
-            onPrevious={() => {
-              if (years.length === 0 || selectedYear === null) {
-                return;
+        <div className="flex w-full flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <ChartVariableMenu
+              selectedLabel={selectedMetric?.label ?? "Variable"}
+              options={card.metrics.map((metric) => ({
+                value: metric.value,
+                label: metric.label,
+              }))}
+              onValueChange={(nextMetric) => {
+                setIsPlaying(false);
+                setSelectedMetricValue(nextMetric as typeof card.defaultMetric);
+              }}
+            />
+            <ChartPlaybackControls
+              isPlaying={isPlaying}
+              onTogglePlayback={() =>
+                setIsPlaying((currentValue) => !currentValue)
               }
+              onPrevious={() => {
+                if (years.length === 0 || selectedYear === null) {
+                  return;
+                }
 
-              setIsPlaying(false);
-              const currentIndex = Math.max(years.indexOf(selectedYear), 0);
-              const nextIndex =
-                currentIndex <= 0 ? years.length - 1 : currentIndex - 1;
-              startTransition(() => {
-                setSelectedYear(years[nextIndex] ?? selectedYear);
-              });
-            }}
-            onNext={() => {
-              if (years.length === 0 || selectedYear === null) {
-                return;
-              }
+                setIsPlaying(false);
+                const currentIndex = Math.max(years.indexOf(selectedYear), 0);
+                const nextIndex =
+                  currentIndex <= 0 ? years.length - 1 : currentIndex - 1;
+                startTransition(() => {
+                  setSelectedYear(years[nextIndex] ?? selectedYear);
+                });
+              }}
+              onNext={() => {
+                if (years.length === 0 || selectedYear === null) {
+                  return;
+                }
 
-              setIsPlaying(false);
-              const currentIndex = Math.max(years.indexOf(selectedYear), 0);
-              const nextIndex =
-                currentIndex >= years.length - 1 ? 0 : currentIndex + 1;
-              startTransition(() => {
-                setSelectedYear(years[nextIndex] ?? selectedYear);
-              });
-            }}
-          />
+                setIsPlaying(false);
+                const currentIndex = Math.max(years.indexOf(selectedYear), 0);
+                const nextIndex =
+                  currentIndex >= years.length - 1 ? 0 : currentIndex + 1;
+                startTransition(() => {
+                  setSelectedYear(years[nextIndex] ?? selectedYear);
+                });
+              }}
+            />
+          </div>
           <DataDownloadMenu chartId={card.download.chartId} />
-        </>
+        </div>
       }
     >
       {selectedMetric && currentFrame ? (

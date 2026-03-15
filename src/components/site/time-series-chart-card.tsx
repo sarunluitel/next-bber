@@ -28,7 +28,7 @@ export function TimeSeriesChartCard({ card }: TimeSeriesChartCardProps) {
       description={card.description}
       sourceLine={card.sourceLine}
       actions={
-        <>
+        <div className="flex w-full flex-wrap items-center justify-between gap-2">
           <ChartVariableMenu
             selectedLabel={selectedMetric?.label ?? "Variable"}
             options={card.metrics.map((metric) => ({
@@ -38,7 +38,7 @@ export function TimeSeriesChartCard({ card }: TimeSeriesChartCardProps) {
             onValueChange={setSelectedMetricValue}
           />
           <DataDownloadMenu chartId={card.download.chartId} />
-        </>
+        </div>
       }
     >
       {selectedMetric && selectedMetric.points.length > 0 ? (
