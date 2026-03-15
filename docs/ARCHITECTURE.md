@@ -47,6 +47,9 @@ JSX:
 - `src/content-models/location-quotient.ts` contains the QCEW request
   contract, metadata normalization helpers, LQ math, frame validation rules,
   and the page model for the location quotient portfolio.
+- `src/content-models/population-pyramid.ts` contains the `pep_cc` request
+  contract, age-band normalization helpers, annual frame construction, and the
+  page model for the population pyramid prototype.
 
 This keeps the UI code ready for a future CMS-backed pages feed without mixing
 layout concerns with the data source.
@@ -98,6 +101,9 @@ Live CMS feeds are fetched on the server only:
   table and metadata endpoints, requests both selected-ownership numerators and
   all-ownership denominators, and normalizes the joined result into frame-based
   bubble-scatter data.
+- `src/lib/population-pyramid.ts` performs the server-only fetch against the
+  `pep_cc` REST table and normalizes annual age-by-sex population rows into a
+  frame-based pyramid contract.
 
 The publications archive mirrors the live BBER contract:
 
@@ -141,6 +147,10 @@ The staff and directors pages mirror the live BBER contract:
   BBER REST data, currently seeded with the `s0801` commuting series and a
   reusable chart frame intended for future line, bar, and other statistical
   renderers.
+- `/external/pyramid-test` is a dynamic server-rendered prototype route for the
+  `pep_cc` age-by-sex population series, normalized into annual frames on the
+  server and rendered locally as an animated population pyramid with a
+  synchronized table fallback.
 - `/data/apidoc` is a local static documentation route for the public data API,
   with route-owned copy and examples instead of embedded backend tooling.
 - `/data/colonias` is a local static section page for colonia methodology,

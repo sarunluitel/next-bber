@@ -58,6 +58,11 @@ split:
   synchronized tabular fallbacks
 - the Plot renderer receives only one already-normalized frame at a time
 
+For mirrored bar views such as `/external/pyramid-test`, keep the same split:
+- the server adapter owns age-band cleanup, total derivation, and annual frame construction
+- the page-level client component owns year playback, scrubber state, and synchronized tabular fallbacks
+- the SVG renderer receives one already-normalized frame plus a shared domain maximum
+
 ## D3 usage philosophy
 Use D3 for what it is best at:
 - scales

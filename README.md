@@ -19,6 +19,7 @@ The app currently includes:
 - a local-content research landing page at `/research`
 - a live CMS-backed publications page at `/research/publications`
 - a live BBER REST API visualization prototype at `/external/test`
+- a live BBER REST API population pyramid prototype at `/external/pyramid-test`
 - a live BBER REST API economic indicators dashboard at `/data/econindicators/`
 - a live BBER REST API location quotient portfolio at `/data/location-quotient`
 - a live BBER REST API CPI page at `/data/cpi`
@@ -82,6 +83,10 @@ models, and then rendered by route-specific UI components.
 The external chart prototype uses `@observablehq/plot` for the first reusable
 time-series renderer while keeping normalization, formatting, and chart-frame
 concerns separate for future visualization types.
+
+The population pyramid prototype extends the external-data pattern with a
+server-normalized `pep_cc` adapter and a dedicated SVG age-by-sex renderer with
+year playback controls and a synchronized table.
 
 The economic indicators dashboard extends that same pattern with a reusable line
 renderer, a server-only adapter for multiple BBER REST tables, compact
@@ -152,6 +157,9 @@ pnpm build
   filtered archive view.
 - The external chart prototype is also URL-driven so metric and selector state
   can be shared directly.
+- The population pyramid prototype reads the live `pep_cc` endpoint on the
+  server, normalizes annual age-by-sex frames, and renders a dedicated animated
+  pyramid with play/pause controls plus a current-year table.
 - The economic indicators dashboard recreates the live `/data/econindicators/`
   page with multiple charts on one page, a compact time toggle, a local search
   field for quickly narrowing cards, and shared Plot-based line rendering.

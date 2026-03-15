@@ -16,6 +16,53 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 
 ---
 
+## 2026-03-15 - Correct population pyramid orientation and frame controls
+- **Status:** accepted
+- **Area:** visualization, docs
+- **Context:** The first `/external/pyramid-test` pass rendered age bands from
+  youngest to oldest, and duplicate `pep_cc` rows in 2020-2022 surfaced as
+  React key errors when the selected year changed.
+- **Decision:** Reverse the chart display order so the oldest cohorts render at
+  the top, deduplicate repeated age-band rows by keeping the latest `time`
+  value per year and age group, and tighten the frame controller so previous,
+  next, play, and pause operate on one stable selected-year state.
+- **Why:** The pyramid now matches the expected visual convention and the
+  client no longer reintroduces runtime errors while users scrub or autoplay
+  through annual frames.
+- **Validation:** `node --test src/content-models/population-pyramid.test.ts`,
+  `pnpm lint`, `pnpm build`, Next.js MCP `get_errors`, and browser verification
+  for `/external/pyramid-test` covering reversed age labels plus frame-control
+  state changes.
+- **Docs updated:** `docs/AGENT_NOTES.md`
+- **Follow-up:** If the upstream API later exposes a cleaner deduped series,
+  preserve the current server-side normalization guard until the new contract
+  is verified.
+
+## 2026-03-15 - Add a population pyramid prototype route from `pep_cc`
+- **Status:** accepted
+- **Area:** visualization, architecture, routing, docs
+- **Context:** The live statewide dashboard includes a population pyramid fed by
+  the `pep_cc` REST table, and the repo needed a dedicated local route that
+  reproduces that annual age-by-sex animation with a clearer reviewable
+  adapter boundary.
+- **Decision:** Add `/external/pyramid-test`, introduce a `pep_cc` content
+  model plus server adapter, normalize annual age-band rows into one frame per
+  year, derive totals when the upstream total row is absent, and render the
+  result through a client SVG pyramid explorer with playback controls and a
+  synchronized current-year table.
+- **Why:** This keeps the age-label mapping, total derivation, and animation
+  state explicit and reviewable while matching the existing external-data page
+  architecture used elsewhere in the repo.
+- **Validation:** Live-page inspection and network inspection for
+  `/data/nm-statewide/`, `node --test src/content-models/population-pyramid.test.ts`,
+  `pnpm lint`, `pnpm build`, Next.js MCP `get_errors`, and browser verification
+  for `/external/pyramid-test` including playback and year scrubber updates.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`,
+  `docs/ARCHITECTURE.md`, `docs/VISUALIZATION_GUIDE.md`
+- **Follow-up:** If this prototype later gains geography selectors, preserve
+  the current server-normalized frame contract instead of moving age cleanup or
+  total derivation into the client.
+
 ## 2026-03-15 - Add a QCEW location quotient portfolio route
 - **Status:** accepted
 - **Area:** visualization, architecture, routing, docs
