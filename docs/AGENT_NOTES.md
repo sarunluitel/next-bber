@@ -16,6 +16,26 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 
 ---
 
+## 2026-03-15 - Recreate the economic indicators dashboard with shared line rendering
+- **Status:** accepted
+- **Area:** visualization, architecture, routing, docs
+- **Context:** The live `/data/econindicators/` page uses many BBER REST datasets on one dashboard, and the initial `/external/test` prototype needed to grow into a multi-chart route with tighter controls and a reusable line renderer.
+- **Decision:** Add a real `/data/econindicators/` route backed by a server-only multi-table adapter, normalize indicator cards into a shared line-series model, reuse one Observable Plot line renderer across the dashboard, add a compact dashboard-level time toggle plus a search field, and handle upstream data quirks such as formatted currency strings, ignored response filters, and duplicated timestamps inside the adapter layer.
+- **Why:** This keeps the page close to the live BBER experience while preserving clean boundaries between external contracts, normalization, and client rendering so the visualization system can expand into larger dashboard families safely.
+- **Validation:** Live-site network inspection for `/data/econindicators/`, `pnpm lint`, `pnpm build`, Next.js MCP `get_errors`, and Playwright verification for the local dashboard with shared time-window switching.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`, `docs/VISUALIZATION_GUIDE.md`
+- **Follow-up:** Add a formal test harness for the indicator adapters, expand the dashboard card catalog to the remaining live tables, and decide whether per-card annotations or downloadable tables should become part of the shared chart frame.
+
+## 2026-03-15 - Add reusable external S0801 chart foundation with Observable Plot
+- **Status:** accepted
+- **Area:** visualization, architecture, dependency, docs
+- **Context:** The repository needed a first production-grade data visualization path for the BBER REST API that could start simple with one chart and still establish durable boundaries for future chart families and richer interactions.
+- **Decision:** Add `@observablehq/plot`, create a server-only external-data fetch layer for the `s0801` REST contract, normalize selectors and chart data into app-owned view models, and ship `/external/test` as a reusable bar-chart prototype with metric, geography-type, geography, and ACS period controls plus source notes, summaries, and a tabular fallback.
+- **Why:** This gives the site a professional external-data chart workflow without mixing raw API payload parsing into client rendering code, and it creates a stable renderer contract for upcoming line, sunburst, pyramid, and animated visualizations.
+- **Validation:** `pnpm lint`, `pnpm build`, Next.js MCP `get_errors`, Playwright verification for `/external/test` on desktop and mobile, and interactive metric switching from worked-from-home share to mean travel time.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`, `docs/VISUALIZATION_GUIDE.md`
+- **Follow-up:** Expand the selector model to additional tables, decide which geographies should remain exposed by default for large area types, and add a formal test harness before the chart family grows further.
+
 ## 2026-03-12 - Establish AI-first repository constitution
 - **Status:** accepted
 - **Area:** workflow, docs, architecture

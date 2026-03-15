@@ -67,6 +67,17 @@ Live CMS feeds are fetched on the server only:
   About section.
 - `src/content-models/bber-about-people.ts` validates and normalizes raw staff
   and director payloads into the existing About page view models.
+- `src/lib/external-bber.ts` performs server-only fetches against the BBER REST
+  metadata and `bbertable` endpoints for external chart routes.
+- `src/content-models/external-bber.ts` validates selector values, curates the
+  initial metric catalog, and normalizes raw REST responses into app-owned
+  chart view models.
+- `src/lib/econindicators.ts` performs server-only fetches against multiple
+  BBER REST `bbertable` datasets for the economic indicators dashboard and
+  normalizes each source into card-ready line-series models.
+- `src/content-models/econindicators.ts` defines the dashboard card catalog,
+  metric catalogs, response-level filters for noisy upstream datasets, and the
+  shared line-series content contract.
 
 The publications archive mirrors the live BBER contract:
 
@@ -102,6 +113,13 @@ The staff and directors pages mirror the live BBER contract:
   static section pages come from local content, while `/about/staff`,
   `/about/directors`, and their bio subpages are fetched from the live CMS and
   normalized before rendering.
+- `/external/test` is a dynamic server-rendered prototype route for external
+  BBER REST data, currently seeded with the `s0801` commuting series and a
+  reusable chart frame intended for future line, bar, and other statistical
+  renderers.
+- `/data/econindicators/` is a dynamic server-rendered dashboard route that
+  recreates the live multi-chart indicators page from BBER REST sources while
+  reusing one shared client line renderer across all cards.
 - `/search` is a local placeholder route used by the shared search UI shell.
 - `app/[...slug]/page.tsx` resolves known URLs from `pages.ts` and renders
   placeholder pages for the current navigation structure.
@@ -181,6 +199,23 @@ Use client components only where interaction is required:
 
 Homepage, research landing, and publication result content all remain
 server-rendered. The news archive list is also server-rendered.
+
+The external chart route keeps the same boundary:
+
+- the page and data-fetch layer remain server-rendered
+- selector interaction and Plot rendering live in a single client entry point
+- chart renderers consume only normalized chart-series props, not raw API
+  payloads
+
+The economic indicators dashboard follows the same boundary:
+
+- the route fetches and normalizes all indicator cards on the server
+- upstream quirks such as ignored query filters or formatted currency strings
+  are resolved inside the adapter layer rather than in the UI
+- the dashboard client owns only presentation-level search, metric selection,
+  and shared time-window filtering
+- every card reuses the shared line renderer contract in
+  `src/visualizations/charts/external/line-graph.tsx`
 
 ## Asset strategy
 

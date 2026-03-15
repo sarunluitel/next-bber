@@ -16,6 +16,8 @@ The app currently includes:
 - a live CMS-backed news archive at `/news`
 - a local-content research landing page at `/research`
 - a live CMS-backed publications page at `/research/publications`
+- a live BBER REST API visualization prototype at `/external/test`
+- a live BBER REST API economic indicators dashboard at `/data/econindicators/`
 - live server-side CMS feeds for homepage news and publications
 - a local `pages.ts` site tree used for navigation and placeholder routes
 - a shared data-driven section sidebar for nested pages under Data, Research,
@@ -54,9 +56,19 @@ Live CMS feeds currently come from:
 - `https://api.bber.unm.edu/api/bber-research/publications?featured=true`
 - `https://api.bber.unm.edu/api/bber-research/publications/indexes`
 - `https://api.bber.unm.edu/api/bber-research/publications?year=YYYY&category=ID&community=ID&limit=100`
+- `https://api.bber.unm.edu/api/data/rest/metadata?api=tablevalues&table=s0801&variables=[...]`
+- `https://api.bber.unm.edu/api/data/rest/bbertable?table=s0801&...`
 
 Those payloads are fetched on the server, normalized into app-owned view
 models, and then rendered by route-specific UI components.
+
+The external chart prototype uses `@observablehq/plot` for the first reusable
+time-series renderer while keeping normalization, formatting, and chart-frame
+concerns separate for future visualization types.
+
+The economic indicators dashboard extends that same pattern with a reusable line
+renderer, a server-only adapter for multiple BBER REST tables, compact
+dashboard-level time filtering, and per-card metric selectors.
 
 ## Development
 
@@ -96,5 +108,10 @@ pnpm build
   contract.
 - Publications filters are URL-driven so the page can be linked directly to a
   filtered archive view.
+- The external chart prototype is also URL-driven so metric and selector state
+  can be shared directly.
+- The economic indicators dashboard recreates the live `/data/econindicators/`
+  page with multiple charts on one page, a compact time toggle, a local search
+  field for quickly narrowing cards, and shared Plot-based line rendering.
 - The contact page uses a client-side mailto form for demo-safe interaction
   without introducing a backend email dependency.
