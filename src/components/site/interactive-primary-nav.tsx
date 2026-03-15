@@ -307,7 +307,8 @@ function MobileLinkItem({
       onClick={onNavigate}
       className={cn(
         "block rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-        depth > 0 ? "ml-3 border-l border-[var(--bber-border)] pl-4" : "",
+        depth === 1 ? "pl-4" : "",
+        depth >= 2 ? "pl-5" : "",
         item.isOverview
           ? "bg-[var(--bber-sand)]/60 text-[var(--bber-red)]"
           : "text-[var(--bber-ink)] hover:bg-[var(--bber-sand)] hover:text-[var(--bber-red)]",
@@ -337,11 +338,16 @@ function MobileBranchMenu({
       <AccordionItem
         value={branch.key}
         className={cn(
-          "border-b border-[var(--bber-border)]",
-          depth > 0 ? "ml-3" : "",
+          depth === 0 ? "border-b border-[var(--bber-border)]" : "border-none",
         )}
       >
-        <div className="flex items-center gap-2 py-1">
+        <div
+          className={cn(
+            "flex items-center gap-2 py-1",
+            depth === 1 ? "pl-4" : "",
+            depth >= 2 ? "pl-5" : "",
+          )}
+        >
           <Link
             href={branch.url}
             onClick={onNavigate}
@@ -356,12 +362,17 @@ function MobileBranchMenu({
             {branch.title}
           </Link>
           <AccordionTrigger
-            className="h-10 flex-none rounded-lg border border-[var(--bber-border)] px-3 py-0 text-[var(--bber-red)] hover:bg-[var(--bber-sand)] hover:no-underline"
+            className="h-10 flex-none rounded-lg border border-[var(--bber-border)] px-3 py-0 text-[var(--bber-red)] hover:bg-[var(--bber-sand)] hover:no-underline [&_[data-slot=accordion-trigger-icon]]:size-5 [&_[data-slot=accordion-trigger-icon]]:text-[var(--bber-red)]"
             aria-label={`Toggle ${branch.title} submenu`}
           />
         </div>
-        <AccordionContent className="pb-3">
-          <div className="flex flex-col gap-1">
+        <AccordionContent className={cn("pb-3", depth >= 0 ? "pl-4" : "")}>
+          <div
+            className={cn(
+              "flex flex-col gap-1 border-l border-[var(--bber-border)]/70",
+              depth === 0 ? "ml-3 pl-3" : "ml-2 pl-3",
+            )}
+          >
             {branch.items.map((item) => {
               if (item.branch) {
                 return (
@@ -476,7 +487,7 @@ export function InteractivePrimaryNav({
           </SheetTrigger>
           <SheetContent
             side="left"
-            className="w-full max-w-[22rem] border-r border-[var(--bber-border)] bg-white"
+            className="border-r border-[var(--bber-border)] bg-white data-[side=left]:w-screen data-[side=left]:max-w-none sm:data-[side=left]:max-w-[22rem]"
           >
             <SheetHeader className="border-b border-[var(--bber-border)] px-5 pt-5 pb-4">
               <SheetTitle className="font-display text-2xl text-[var(--bber-red)]">
@@ -487,7 +498,7 @@ export function InteractivePrimaryNav({
               </SheetDescription>
             </SheetHeader>
 
-            <div className="space-y-5 overflow-y-auto px-5 py-5">
+            <div className="flex flex-col gap-5 overflow-y-auto px-5 py-5">
               <form action="/search" className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--bber-stone)]" />
@@ -506,7 +517,7 @@ export function InteractivePrimaryNav({
                 </Button>
               </form>
 
-              <nav aria-label="Mobile primary" className="flex flex-col gap-1">
+              <nav aria-label="Mobile primary" className="flex flex-col gap-2">
                 {topLevelPages.map((pageEntry) => {
                   if (!pageEntry.branch) {
                     return (
