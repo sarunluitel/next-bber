@@ -47,7 +47,9 @@ For the current external-data work, keep one shared renderer contract per chart
 family. The first reusable line renderer lives at
 `src/visualizations/charts/external/line-graph.tsx`, while route-specific
 dashboard code should stay responsible only for card composition and selector
-state.
+state. Public data pages such as `/data/econindicators/` and `/data/cpi`
+should reuse that same renderer when they are presenting the same time-series
+shape instead of forking page-specific line chart components.
 
 ## D3 usage philosophy
 Use D3 for what it is best at:

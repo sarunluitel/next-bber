@@ -40,6 +40,10 @@ JSX:
   archive page.
 - `src/content-models/about-content.ts` contains the static About section
   content, including services, history, helpful links, and contact content.
+- `src/content-models/colonias-content.ts` contains the Colonias methodology
+  page content plus the county-grouped colonia map directory.
+- `src/content-models/cpi.ts` contains the normalized CPI route model for the
+  trend chart, annual table, source metadata, and supporting public copy.
 
 This keeps the UI code ready for a future CMS-backed pages feed without mixing
 layout concerns with the data source.
@@ -84,6 +88,9 @@ Live CMS feeds are fetched on the server only:
 - `src/content-models/econindicators.ts` defines the dashboard card catalog,
   metric catalogs, response-level filters for noisy upstream datasets, and the
   shared line-series content contract.
+- `src/lib/cpi.ts` performs server-only fetches against the BBER REST `v_cpi`
+  and `cpitab` endpoints, normalizes the monthly trend and annual table
+  separately, and keeps partial or failed sections reviewable in the page UI.
 
 The publications archive mirrors the live BBER contract:
 
@@ -129,6 +136,13 @@ The staff and directors pages mirror the live BBER contract:
   renderers.
 - `/data/apidoc` is a local static documentation route for the public data API,
   with route-owned copy and examples instead of embedded backend tooling.
+- `/data/colonias` is a local static section page for colonia methodology,
+  downloads, and reference materials.
+- `/data/colonias/nm-colonia-maps` is a local static directory page for
+  county-grouped colonia map PDFs published through `api.bber.unm.edu`.
+- `/data/cpi` is a dynamic server-rendered CPI route that reads the live BBER
+  REST monthly trend and annual table endpoints while reusing the shared line
+  renderer contract.
 - `/data/nm-duc` is a live CMS-backed conference landing page that reads the
   `duc-index` record plus the `data-conferences` archive feed from
   `api.bber.unm.edu`.
@@ -253,6 +267,15 @@ The economic indicators dashboard follows the same boundary:
   and shared time-window filtering
 - every card reuses the shared line renderer contract in
   `src/visualizations/charts/external/line-graph.tsx`
+
+The CPI route follows the same visualization boundary:
+
+- the route fetches the monthly trend and annual table on the server
+- raw API payloads are normalized before reaching the page renderer
+- the shared Plot-based line renderer receives only normalized time-series
+  points and formatting metadata
+- trend summary copy, latest values, and coverage labels are derived from the
+  current normalized series rather than hardcoded into the page
 - chart downloads are served through a local route handler so JSON exports and
   CSV ZIP generation stay server-owned and reusable across future dashboards
 - the client only owns the download menu interaction and the API-link modal
@@ -263,6 +286,15 @@ The API documentation page follows a different boundary:
 - the page documents supported read-only API behavior only
 - unsupported backend-only features should be omitted from public UI instead of
   rendered as placeholders
+
+The Colonias section follows a local-content boundary:
+
+- live-site and network inspection should be performed before assuming a CMS
+  source, because the page currently behaves like editorial content with linked
+  files rather than a dedicated API feed
+- page copy, downloadable resource metadata, and the county-grouped map
+  directory live in a reviewable local content model
+- published XLS, ZIP, and PDF assets still resolve to `api.bber.unm.edu`
 
 ## Asset strategy
 

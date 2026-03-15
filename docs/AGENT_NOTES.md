@@ -16,6 +16,26 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 
 ---
 
+## 2026-03-15 - Implement the CPI page with shared line-chart rendering
+- **Status:** accepted
+- **Area:** visualization, architecture, routing, docs
+- **Context:** The Data navigation already exposed `/data/cpi`, and live-site inspection showed that the page reads monthly CPI trend data and an annual CPI table from `api.bber.unm.edu` rather than relying on static page-local values.
+- **Decision:** Add a dedicated `/data/cpi` route, fetch `bbertable?table=v_cpi...` plus `cpitab?areatype=00` on the server, normalize the monthly trend, annual table, and source metadata into a CPI page model, and render the trend with the shared Observable Plot line renderer already used by other data pages.
+- **Why:** This keeps the CPI page tied to the live API contract, avoids stale hardcoded summaries, and extends the shared chart system to another public research route without creating a one-off visualization stack.
+- **Validation:** Live-page and network inspection for `/data/cpi/`, `pnpm lint`, `pnpm build`, Next.js MCP `get_errors`, and browser verification for the local `/data/cpi` route.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`, `docs/VISUALIZATION_GUIDE.md`
+- **Follow-up:** If the CPI page later needs downloads or comparison views, keep them on the same server-normalized contract instead of branching into client-only transforms.
+
+## 2026-03-15 - Implement the Colonias section as local structured content
+- **Status:** accepted
+- **Area:** routing, public content, docs
+- **Context:** The Data navigation already exposed `/data/colonias/`, but the route still fell through to placeholder content. Live-site inspection showed editorial content and file links for the Colonias pages rather than a dedicated `api.bber.unm.edu` page-data feed.
+- **Decision:** Add dedicated `/data/colonias` and `/data/colonias/nm-colonia-maps` routes backed by a local Colonias content model, preserving the live methodology copy, downloadable file links, and county-grouped map directory while keeping published assets pointed at `api.bber.unm.edu`.
+- **Why:** This gives the public site a finished Colonias section without inventing a CMS boundary that the live page does not currently expose.
+- **Validation:** Live-page and network inspection for `/data/colonias/` and `/data/colonias/nm-colonia-maps/`, `pnpm lint`, `pnpm build`, and local browser verification for both routes.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`
+- **Follow-up:** If the live site later moves Colonias content into a dedicated API feed, preserve the current content model as the normalization target rather than pushing raw payloads directly into route components.
+
 ## 2026-03-15 - Implement the NM Data Users Conference section as live CMS-backed routes
 - **Status:** accepted
 - **Area:** routing, cms, architecture, docs

@@ -20,9 +20,12 @@ The app currently includes:
 - a live CMS-backed publications page at `/research/publications`
 - a live BBER REST API visualization prototype at `/external/test`
 - a live BBER REST API economic indicators dashboard at `/data/econindicators/`
+- a live BBER REST API CPI page at `/data/cpi`
 - a first-party API documentation page at `/data/apidoc`
 - a live CMS-backed NM Data Users Conference section at `/data/nm-duc/` with
   automatically discoverable conference detail pages
+- a Colonias section at `/data/colonias/` with a local methodology page and a
+  county-grouped colonia maps directory
 - live server-side CMS feeds for homepage news and publications
 - a local `pages.ts` site tree used for navigation and placeholder routes
 - a shared data-driven section sidebar for nested pages under Data, Research,
@@ -40,6 +43,7 @@ Stable site structure and homepage chrome content live locally:
 - `src/content-models/homepage-content.ts`
 - `src/content-models/research-content.ts`
 - `src/content-models/about-content.ts`
+- `src/content-models/colonias-content.ts`
 - `src/content-models/subscribers-content.ts`
 - `src/content-models/bber-about-people.ts`
 
@@ -64,6 +68,8 @@ Live CMS feeds currently come from:
 - `https://api.bber.unm.edu/api/bber-research/publications?year=YYYY&category=ID&community=ID&limit=100`
 - `https://api.bber.unm.edu/api/data/rest/metadata?api=tablevalues&table=s0801&variables=[...]`
 - `https://api.bber.unm.edu/api/data/rest/bbertable?table=s0801&...`
+- `https://api.bber.unm.edu/api/data/rest/bbertable?table=v_cpi&stfips=00&areatype=06&area=0000`
+- `https://api.bber.unm.edu/api/data/rest/cpitab?areatype=00`
 - `https://api.bber.unm.edu/api/bber-data-pages/duc-index`
 - `https://api.bber.unm.edu/api/bber-data-pages?group=data-conferences`
 - `https://api.bber.unm.edu/api/bber-data-pages/{slug}`
@@ -80,6 +86,10 @@ renderer, a server-only adapter for multiple BBER REST tables, compact
 dashboard-level time filtering, per-card metric selectors, and researcher-facing
 download actions for API links, direct JSON, and CSV ZIP exports.
 
+The CPI page reuses that same Observable Plot line renderer for the published
+monthly CPI-U series while keeping the annual table and source metadata in a
+separate server-normalized route model.
+
 The API documentation page is a local, static route that presents public API
 guidance for researchers and faculty while omitting unsupported backend-only
 operations tooling from the rendered page.
@@ -87,6 +97,10 @@ operations tooling from the rendered page.
 The NM Data Users Conference section is driven directly from the BBER data-pages
 API, with the conference index and detail slugs normalized on the server so new
 conference pages can appear without hardcoded route edits.
+
+The Colonias section is implemented as local structured content after live-site
+inspection showed editorial copy and file links rather than a separate
+`api.bber.unm.edu` content feed for the page itself.
 
 ## Development
 
@@ -134,6 +148,9 @@ pnpm build
 - The economic indicators dashboard recreates the live `/data/econindicators/`
   page with multiple charts on one page, a compact time toggle, a local search
   field for quickly narrowing cards, and shared Plot-based line rendering.
+- The CPI page reads the live `v_cpi` and `cpitab` endpoints on the server,
+  renders the monthly CPI-U trend through the shared line graph component, and
+  keeps the annual table tied to the same live data boundary.
 - The API documentation page keeps the endpoint and parameter guidance local to
   this repo so the site can present supported API capabilities without
   exposing unfinished backend features in the public UI.
@@ -141,5 +158,8 @@ pnpm build
   `group=data-conferences` API contract, and detail pages must stay data-driven
   so new conference records can render automatically when the upstream content
   changes.
+- The Colonias routes keep their page copy and county-grouped map directory in a
+  local content model while linking directly to the published BBER file assets
+  on `api.bber.unm.edu`.
 - The contact page uses a client-side mailto form for demo-safe interaction
   without introducing a backend email dependency.
