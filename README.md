@@ -20,6 +20,7 @@ The app currently includes:
 - a live CMS-backed publications page at `/research/publications`
 - a live BBER REST API visualization prototype at `/external/test`
 - a live BBER REST API economic indicators dashboard at `/data/econindicators/`
+- a live BBER REST API location quotient portfolio at `/data/location-quotient`
 - a live BBER REST API CPI page at `/data/cpi`
 - a first-party API documentation page at `/data/apidoc`
 - a live CMS-backed NM Data Users Conference section at `/data/nm-duc/` with
@@ -68,6 +69,7 @@ Live CMS feeds currently come from:
 - `https://api.bber.unm.edu/api/bber-research/publications?year=YYYY&category=ID&community=ID&limit=100`
 - `https://api.bber.unm.edu/api/data/rest/metadata?api=tablevalues&table=s0801&variables=[...]`
 - `https://api.bber.unm.edu/api/data/rest/bbertable?table=s0801&...`
+- `https://api.bber.unm.edu/api/data/rest/bbertable?table=qcew&...`
 - `https://api.bber.unm.edu/api/data/rest/bbertable?table=v_cpi&stfips=00&areatype=06&area=0000`
 - `https://api.bber.unm.edu/api/data/rest/cpitab?areatype=00`
 - `https://api.bber.unm.edu/api/bber-data-pages/duc-index`
@@ -89,6 +91,11 @@ download actions for API links, direct JSON, and CSV ZIP exports.
 The CPI page reuses that same Observable Plot line renderer for the published
 monthly CPI-U series while keeping the annual table and source metadata in a
 separate server-normalized route model.
+
+The location quotient page extends the same server/client split with a
+QCEW-specific adapter that joins local, reference, base-year, and all-ownership
+denominator series on the server before handing an animated bubble-scatter
+contract to a client Plot renderer.
 
 The API documentation page is a local, static route that presents public API
 guidance for researchers and faculty while omitting unsupported backend-only
@@ -151,6 +158,10 @@ pnpm build
 - The CPI page reads the live `v_cpi` and `cpitab` endpoints on the server,
   renders the monthly CPI-U trend through the shared line graph component, and
   keeps the annual table tied to the same live data boundary.
+- The location quotient page reads live `qcew` table and metadata endpoints on
+  the server, computes BLS-style concentration ratios from normalized industry
+  shares, and renders an animated year-by-year bubble portfolio with a
+  synchronized audit table.
 - The API documentation page keeps the endpoint and parameter guidance local to
   this repo so the site can present supported API capabilities without
   exposing unfinished backend features in the public UI.

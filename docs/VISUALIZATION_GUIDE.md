@@ -51,6 +51,13 @@ state. Public data pages such as `/data/econindicators/` and `/data/cpi`
 should reuse that same renderer when they are presenting the same time-series
 shape instead of forking page-specific line chart components.
 
+For scatter or portfolio views such as `/data/location-quotient`, keep the same
+split:
+- the server adapter owns all join logic, denominator rules, and data-quality filtering
+- the page-level client component owns frame selection, animation controls, and
+  synchronized tabular fallbacks
+- the Plot renderer receives only one already-normalized frame at a time
+
 ## D3 usage philosophy
 Use D3 for what it is best at:
 - scales
@@ -69,6 +76,8 @@ Use Observable Plot for what it is best at:
 - fast, reviewable statistical chart rendering
 - responsive axes and marks for simple chart families
 - tooltip and pointer interactions that do not justify a fully custom D3 scene
+- animated frame-by-frame portfolio scatters when the temporal join logic is
+  already resolved server-side
 
 ## Invariants
 - Do not bury business logic inside anonymous D3 callbacks when named helpers would be clearer.
@@ -81,6 +90,9 @@ Use Observable Plot for what it is best at:
 - Do not ship chart annotations or summaries that embed transient data values
   unless those values are computed from the live normalized series on each
   render.
+- If a chart compares multiple upstream datasets to compute one metric, keep
+  the mathematical contract reviewable in a named server helper instead of
+  rebuilding it inside a client component or Plot callback.
 
 ## Trigger for documentation updates
 Update this file when:

@@ -16,6 +16,30 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 
 ---
 
+## 2026-03-15 - Add a QCEW location quotient portfolio route
+- **Status:** accepted
+- **Area:** visualization, architecture, routing, docs
+- **Context:** The Data section needed a public location quotient view that can
+  compare one configured geography with a reference geography, animate the
+  yearly industry portfolio, and stay reusable for later geography swaps
+  without hardcoding New Mexico-specific chart math into the client.
+- **Decision:** Add `/data/location-quotient`, introduce a QCEW-specific server
+  adapter plus page contract, fetch selected-ownership numerators alongside
+  all-ownership denominator totals, compute BLS-style location quotients and
+  local base-year growth on the server, and render the result through a client
+  Plot bubble chart with playback controls and a synchronized audit table.
+- **Why:** This keeps the multi-endpoint QCEW join logic reviewable, preserves
+  the server/client boundary used by the other data pages, and avoids freezing
+  transient specialization or growth statements into static copy.
+- **Validation:** `node --test src/content-models/location-quotient.test.ts`,
+  `pnpm lint`, `pnpm build`, Next.js MCP `get_errors`, and browser verification
+  for `/data/location-quotient` including frame playback and table updates.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`,
+  `docs/ARCHITECTURE.md`, `docs/VISUALIZATION_GUIDE.md`
+- **Follow-up:** If the route later gains end-user geography selectors, keep
+  the current request contract and server join rules intact rather than moving
+  denominator logic into URL or client-only helpers.
+
 ## 2026-03-15 - Implement the CPI page with shared line-chart rendering
 - **Status:** accepted
 - **Area:** visualization, architecture, routing, docs

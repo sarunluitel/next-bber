@@ -117,6 +117,11 @@ export const Pages = {
         url: "/data/econindicators/",
         children: {},
       },
+      Location_Quotient: {
+        title: "Location Quotient",
+        url: "/data/location-quotient/",
+        children: {},
+      },
       CPI: {
         title: "Consumer Price Index",
         url: "/data/cpi",

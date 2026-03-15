@@ -44,6 +44,9 @@ JSX:
   page content plus the county-grouped colonia map directory.
 - `src/content-models/cpi.ts` contains the normalized CPI route model for the
   trend chart, annual table, source metadata, and supporting public copy.
+- `src/content-models/location-quotient.ts` contains the QCEW request
+  contract, metadata normalization helpers, LQ math, frame validation rules,
+  and the page model for the location quotient portfolio.
 
 This keeps the UI code ready for a future CMS-backed pages feed without mixing
 layout concerns with the data source.
@@ -91,6 +94,10 @@ Live CMS feeds are fetched on the server only:
 - `src/lib/cpi.ts` performs server-only fetches against the BBER REST `v_cpi`
   and `cpitab` endpoints, normalizes the monthly trend and annual table
   separately, and keeps partial or failed sections reviewable in the page UI.
+- `src/lib/location-quotient.ts` performs server-only fetches against QCEW
+  table and metadata endpoints, requests both selected-ownership numerators and
+  all-ownership denominators, and normalizes the joined result into frame-based
+  bubble-scatter data.
 
 The publications archive mirrors the live BBER contract:
 
@@ -143,6 +150,10 @@ The staff and directors pages mirror the live BBER contract:
 - `/data/cpi` is a dynamic server-rendered CPI route that reads the live BBER
   REST monthly trend and annual table endpoints while reusing the shared line
   renderer contract.
+- `/data/location-quotient` is a dynamic server-rendered QCEW route that
+  compares a local geography against a reference geography, computes
+  location-quotient shares plus base-year growth on the server, and renders the
+  result as an animated bubble portfolio with a synchronized industry table.
 - `/data/nm-duc` is a live CMS-backed conference landing page that reads the
   `duc-index` record plus the `data-conferences` archive feed from
   `api.bber.unm.edu`.
@@ -279,6 +290,18 @@ The CPI route follows the same visualization boundary:
 - chart downloads are served through a local route handler so JSON exports and
   CSV ZIP generation stay server-owned and reusable across future dashboards
 - the client only owns the download menu interaction and the API-link modal
+
+The location quotient route follows the same visualization boundary:
+
+- the route fetches local, reference, base-year, and denominator datasets on
+  the server
+- raw QCEW rows and metadata are normalized before they reach the client
+- the client owns only frame playback, year selection, and synchronized table
+  presentation
+- the Plot renderer receives one normalized frame at a time instead of raw
+  multi-year API payloads
+- data-quality filtering for aggregate codes, missing base-year employment, and
+  zero denominators stays inside the server normalization layer
 
 The API documentation page follows a different boundary:
 
