@@ -36,6 +36,9 @@ JSX:
   assets, homepage promo content, About BBER copy, and footer data.
 - `src/content-models/research-content.ts` contains the stable copy and local
   imagery for the research landing page.
+- `src/content-models/data-overview.ts` contains the local editorial copy,
+  inline-link content model, and preview-card contract for the Data landing
+  page.
 - `src/content-models/news-content.ts` contains the stable copy for the news
   archive page.
 - `src/content-models/about-content.ts` contains the static About section
@@ -97,6 +100,9 @@ Live CMS feeds are fetched on the server only:
 - `src/lib/econindicators.ts` performs server-only fetches against multiple
   BBER REST `bbertable` datasets for the economic indicators dashboard and
   normalizes each source into card-ready line-series models.
+- `src/lib/data-overview.ts` performs the server-only preview fetches for the
+  Data landing page and normalizes the latest location quotient and U.S.
+  population pyramid frames into lightweight preview models.
 - `src/content-models/econindicators.ts` defines the dashboard card catalog,
   metric catalogs, response-level filters for noisy upstream datasets, and the
   shared line-series content contract.
@@ -155,6 +161,9 @@ The staff and directors pages mirror the live BBER contract:
 - `/subscribers/[...slug]` renders local subscriber pages such as FOR-UNM
   access and the privacy policy through a dedicated content model rather than
   the generic placeholder route.
+- `/data` is a local-content section landing page that mirrors the live Data
+  overview and layers in two server-fetched preview charts for the latest
+  location quotient and United States population frames.
 - `/data/apidoc` is a local static documentation route for the public data API,
   with route-owned copy and examples instead of embedded backend tooling.
 - `/data/colonias` is a local static section page for colonia methodology,

@@ -12,6 +12,7 @@ type PopulationPyramidChartProps = {
   ariaLabel: string;
   frame: PopulationPyramidFrame;
   maxBandPopulation: number;
+  showDetailLabel?: boolean;
 };
 
 function useElementWidth() {
@@ -60,6 +61,7 @@ export function PopulationPyramidChart({
   ariaLabel,
   frame,
   maxBandPopulation,
+  showDetailLabel = true,
 }: PopulationPyramidChartProps) {
   const { containerReference, containerWidth } = useElementWidth();
   const [hoveredBandCode, setHoveredBandCode] = useState<number | null>(null);
@@ -116,9 +118,11 @@ export function PopulationPyramidChart({
       ref={containerReference}
       className="min-h-[28rem] w-full rounded-xl border border-[var(--bber-border)] bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] p-3 sm:p-4"
     >
-      <div className="mb-3 rounded-lg border border-[var(--bber-border)]/80 bg-white/88 px-3 py-2 text-xs leading-5 text-[var(--bber-ink)]/72">
-        {detailLabel}
-      </div>
+      {showDetailLabel ? (
+        <div className="mb-3 rounded-lg border border-[var(--bber-border)]/80 bg-white/88 px-3 py-2 text-xs leading-5 text-[var(--bber-ink)]/72">
+          {detailLabel}
+        </div>
+      ) : null}
       {containerWidth > 0 ? (
         <svg
           role="img"

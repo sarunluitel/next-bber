@@ -16,6 +16,53 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 
 ---
 
+## 2026-03-15 - Implement the `/data` section landing page with live previews
+- **Status:** accepted
+- **Area:** routing, visualization, architecture, docs
+- **Context:** The Data section root still fell through to the generic
+  placeholder route, while the live site already uses `/data/` as a real
+  editorial landing page with section guidance and two lightweight preview
+  visualizations under “Beyond New Mexico.”
+- **Decision:** Add a dedicated `/data` route backed by a local content model,
+  reuse the shared section shell and sidebar, and fetch the latest location
+  quotient plus United States population pyramid frames on the server for two
+  preview cards. Keep the editorial body local, keep the preview math in the
+  existing normalization layer, and degrade gracefully when either preview feed
+  fails instead of letting the page crash.
+- **Why:** The Data landing page is part of the public information
+  architecture, not just a navigation stub, and using the existing chart
+  renderers for preview cards keeps the implementation compact and reviewable.
+- **Validation:** Live-page and network inspection for
+  [the production Data landing page](https://bber.unm.edu/data/), `pnpm lint`,
+  `pnpm build`, Next.js MCP `get_errors`, and browser verification for the
+  local `/data/` route with both preview charts rendered.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`,
+  `docs/ARCHITECTURE.md`, `docs/VISUALIZATION_GUIDE.md`
+- **Follow-up:** If the section later needs more preview cards, keep the page
+  editorial-first and reuse the existing normalization helpers instead of
+  adding a second dashboard-specific chart stack.
+
+## 2026-03-15 - Add playback controls to `/data` preview charts
+- **Status:** accepted
+- **Area:** visualization, docs
+- **Context:** The new `/data/` landing page shipped with live preview cards,
+  but the location quotient and United States population pyramid previews were
+  fixed to the latest year only.
+- **Decision:** Pass the full frame series for both previews through the
+  server-normalized page model and wrap each preview in a compact client
+  controller with shared previous, play or pause, and next actions.
+- **Why:** The landing page now matches the intended “Beyond New Mexico”
+  interaction pattern without promoting those previews into full dashboard
+  cards.
+- **Validation:** `pnpm lint`, `pnpm build`, Next.js MCP `get_errors`, and
+  browser verification on the local `/data/` route confirming the location
+  quotient and population pyramid preview years advance through their time
+  series.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`
+- **Follow-up:** If the preview cards later gain scrubbers or download actions,
+  keep the controls compact so the page remains an overview rather than a
+  second dashboard surface.
+
 ## 2026-03-15 - Rebuild `/data/nm-statewide/` with portable chart cards
 - **Status:** accepted
 - **Area:** visualization, architecture, routing, docs

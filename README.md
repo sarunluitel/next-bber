@@ -18,6 +18,8 @@ The app currently includes:
 - a live CMS-backed news archive at `/news`
 - a local-content research landing page at `/research`
 - a live CMS-backed publications page at `/research/publications`
+- a local Data landing page at `/data` with live preview cards for
+  location-quotient and U.S. population data
 - a live BBER REST API statewide dashboard at `/data/nm-statewide/`
 - a live BBER REST API economic indicators dashboard at `/data/econindicators/`
 - a live BBER REST API CPI page at `/data/cpi`
@@ -77,6 +79,10 @@ Live CMS feeds currently come from:
 
 Those payloads are fetched on the server, normalized into app-owned view
 models, and then rendered by route-specific UI components.
+
+The Data landing page at `/data` is a local editorial route that mirrors the
+live section overview while reusing server-fetched preview cards for the latest
+location quotient and United States population pyramid frames.
 
 The statewide dashboard at `/data/nm-statewide/` uses compact, reusable chart
 cards for location quotient, educational attainment, population pyramid, and
@@ -151,6 +157,11 @@ pnpm build
   contract.
 - Publications filters are URL-driven so the page can be linked directly to a
   filtered archive view.
+- The `/data` landing page now mirrors the live section overview with local
+  editorial copy, shared Data-section navigation, and two server-fetched
+  preview charts rendered from the same app-owned normalization boundary used
+  elsewhere in the site, including compact play, pause, previous, and next
+  controls for both preview timelines.
 - The statewide dashboard recreates the live `/data/nm-statewide/` page with
   six compact chart cards, portable chart-level controls, and shared download
   actions backed by `/api/chart-download/[chartId]`.

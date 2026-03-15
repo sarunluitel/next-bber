@@ -7,6 +7,7 @@ import {
   normalizePopulationPyramidRows,
   normalizePopulationPyramidSourceMetadata,
   type PopulationPyramidPageData,
+  type PopulationPyramidRequestConfig,
 } from "@/content-models/population-pyramid";
 
 const BBER_REST_ENDPOINT = "https://api.bber.unm.edu/api/data/rest/bbertable";
@@ -19,8 +20,9 @@ export type BberTableResponse = {
   };
 };
 
-export function buildPopulationPyramidApiUrl() {
-  const requestConfig = getDefaultPopulationPyramidConfig();
+export function buildPopulationPyramidApiUrl(
+  requestConfig: PopulationPyramidRequestConfig = getDefaultPopulationPyramidConfig(),
+) {
   const searchParams = new URLSearchParams({
     table: requestConfig.table,
     areatype: requestConfig.areatype,
@@ -32,8 +34,10 @@ export function buildPopulationPyramidApiUrl() {
   return `${BBER_REST_ENDPOINT}?${searchParams.toString()}`;
 }
 
-export async function fetchPopulationPyramidResponse() {
-  const response = await fetch(buildPopulationPyramidApiUrl(), {
+export async function fetchPopulationPyramidResponse(
+  requestConfig: PopulationPyramidRequestConfig = getDefaultPopulationPyramidConfig(),
+) {
+  const response = await fetch(buildPopulationPyramidApiUrl(requestConfig), {
     next: { revalidate: 3600 },
   });
 

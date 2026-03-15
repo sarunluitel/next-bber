@@ -48,9 +48,9 @@ family. The first reusable line renderer lives at
 `src/visualizations/charts/external/line-graph.tsx`, while route-specific
 dashboard code should stay responsible only for compact card composition and
 selector state. Public data pages such as `/data/nm-statewide/`,
-`/data/econindicators/`, and `/data/cpi` should reuse that same renderer when
-they are presenting the same time-series shape instead of forking
-page-specific line chart components.
+`/data/econindicators/`, `/data/cpi`, and `/data/` should reuse that same
+renderer when they are presenting the same time-series shape instead of
+forking page-specific line chart components.
 
 For scatter or portfolio views such as the location quotient card on
 `/data/nm-statewide/`, keep the same split:
@@ -83,6 +83,9 @@ Portable chart primitives should stay compact by default:
   not belong inside dashboard chart cards
 - if a page needs a table fallback, render it as a separate primitive or route
   concern instead of baking it into every chart card
+- editorial landing pages can reuse the same chart renderers as static previews
+  by passing one already-normalized frame instead of rebuilding a page-specific
+  mini-chart stack
 
 ## D3 usage philosophy
 Use D3 for what it is best at:
