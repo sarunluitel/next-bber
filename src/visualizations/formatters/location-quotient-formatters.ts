@@ -2,6 +2,7 @@ import type {
   LocationQuotientFrame,
   LocationQuotientPoint,
 } from "@/content-models/location-quotient";
+import { formatTimeSeriesValue } from "@/visualizations/formatters/external-chart-formatters";
 
 const DECIMAL_FORMATTER = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 2,
@@ -11,10 +12,6 @@ const DECIMAL_FORMATTER = new Intl.NumberFormat("en-US", {
 const PERCENT_FORMATTER = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
-});
-
-const COUNT_FORMATTER = new Intl.NumberFormat("en-US", {
-  maximumFractionDigits: 0,
 });
 
 export function formatLocationQuotientValue(value: number) {
@@ -29,12 +26,22 @@ export function formatGrowthPercent(value: number) {
   return `${PERCENT_FORMATTER.format(value * 100)}%`;
 }
 
+export function formatLocationQuotientMetricValue(
+  point: LocationQuotientPoint,
+) {
+  return formatTimeSeriesValue(point.localValue, point.formatKind, true);
+}
+
+export function formatLocationQuotientShare(value: number) {
+  return formatGrowthPercent(value);
+}
+
 export function formatEmploymentCount(value: number) {
-  return COUNT_FORMATTER.format(value);
+  return formatTimeSeriesValue(value, "count", true);
 }
 
 export function formatEmploymentShare(value: number) {
-  return formatGrowthPercent(value);
+  return formatLocationQuotientShare(value);
 }
 
 export function buildLocationQuotientTooltip(point: LocationQuotientPoint) {
@@ -42,9 +49,9 @@ export function buildLocationQuotientTooltip(point: LocationQuotientPoint) {
     `${point.industryLabel} · ${point.yearLabel}`,
     `LQ: ${formatLocationQuotientValue(point.locationQuotient)}`,
     `Growth since base year: ${formatGrowthPercent(point.growthSinceBaseYear)}`,
-    `Local employment: ${formatEmploymentCount(point.localEmployment)}`,
-    `Local share: ${formatEmploymentShare(point.localIndustryShare)}`,
-    `Reference share: ${formatEmploymentShare(point.baseIndustryShare)}`,
+    `Local ${point.metricLabel}: ${formatTimeSeriesValue(point.localValue, point.formatKind, true)}`,
+    `Local share: ${formatLocationQuotientShare(point.localShare)}`,
+    `Reference share: ${formatLocationQuotientShare(point.baseShare)}`,
   ].join("\n");
 }
 
@@ -68,5 +75,5 @@ export function buildLocationQuotientFrameSummary(
     (leftPoint, rightPoint) => rightPoint.bubbleSize - leftPoint.bubbleSize,
   )[0];
 
-  return `${highestQuotientPoint.industryLabel} shows the highest specialization in ${frame.yearLabel} at an LQ of ${formatLocationQuotientValue(highestQuotientPoint.locationQuotient)}. ${fastestGrowthPoint.industryLabel} has the strongest local employment growth since ${baseYear} at ${formatGrowthPercent(fastestGrowthPoint.growthSinceBaseYear)}. ${largestEmploymentPoint.industryLabel} is the largest plotted local industry with ${formatEmploymentCount(largestEmploymentPoint.localEmployment)} jobs.`;
+  return `${highestQuotientPoint.industryLabel} shows the highest specialization in ${frame.yearLabel} at an LQ of ${formatLocationQuotientValue(highestQuotientPoint.locationQuotient)}. ${fastestGrowthPoint.industryLabel} has the strongest local growth since ${baseYear} at ${formatGrowthPercent(fastestGrowthPoint.growthSinceBaseYear)}. ${largestEmploymentPoint.industryLabel} is the largest plotted local industry at ${formatLocationQuotientMetricValue(largestEmploymentPoint)}.`;
 }

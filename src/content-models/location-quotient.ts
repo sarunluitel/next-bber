@@ -1,3 +1,5 @@
+import type { ValueFormatKind } from "@/visualizations/chart-contracts";
+
 export type QcewSelection = {
   stfips: string;
   areatype: string;
@@ -29,18 +31,36 @@ export type LocationQuotientSelectionSummary = {
   summaryLabel: string;
 };
 
+export type LocationQuotientMetricKey =
+  | "estab"
+  | "avgemp"
+  | "totwage"
+  | "avgwkwage"
+  | "taxwage"
+  | "contrib";
+
+export type LocationQuotientMetricOption = {
+  value: LocationQuotientMetricKey;
+  label: string;
+  format: ValueFormatKind;
+};
+
 export type LocationQuotientPoint = {
   year: number;
   yearLabel: string;
   industryCode: string;
   industryLabel: string;
+  metricKey: LocationQuotientMetricKey;
+  metricLabel: string;
+  formatKind: ValueFormatKind;
   locationQuotient: number;
   growthSinceBaseYear: number;
   bubbleSize: number;
-  localEmployment: number;
-  baseEmployment: number;
-  localIndustryShare: number;
-  baseIndustryShare: number;
+  localValue: number;
+  baseValue: number;
+  baseYearValue: number;
+  localShare: number;
+  baseShare: number;
 };
 
 export type LocationQuotientFrame = {
@@ -72,6 +92,8 @@ export type LocationQuotientChartModel = {
   chartTitle: string;
   chartSubtitle: string;
   summary: string;
+  metrics: LocationQuotientMetricOption[];
+  defaultMetric: LocationQuotientMetricKey;
   frames: LocationQuotientFrame[];
   initialYear: number | null;
   baseYear: number;
@@ -97,7 +119,12 @@ export type QcewDataRow = {
   year: number;
   periodType: string;
   industryCode: string;
+  establishments: number | null;
   averageEmployment: number | null;
+  totalWages: number | null;
+  averageWeekWage: number | null;
+  taxableWages: number | null;
+  contributions: number | null;
 };
 
 export type BuildLocationQuotientFramesResult = {
@@ -131,6 +158,39 @@ const DEFAULT_LOCATION_QUOTIENT_CONFIG: LocationQuotientRequestConfig = {
 };
 
 const FILTERED_INDUSTRY_CODES = new Set(["00", "10", "99"]);
+
+export const LOCATION_QUOTIENT_METRIC_OPTIONS = [
+  {
+    value: "estab",
+    label: "Establishments",
+    format: "count",
+  },
+  {
+    value: "avgemp",
+    label: "Average Employment",
+    format: "count",
+  },
+  {
+    value: "totwage",
+    label: "Total Wages",
+    format: "currency",
+  },
+  {
+    value: "avgwkwage",
+    label: "Average Week Wage",
+    format: "currency",
+  },
+  {
+    value: "taxwage",
+    label: "taxwage",
+    format: "currency",
+  },
+  {
+    value: "contrib",
+    label: "contrib",
+    format: "currency",
+  },
+] satisfies LocationQuotientMetricOption[];
 
 function getStringValue(record: Record<string, unknown>, key: string) {
   const value = record[key];
@@ -187,15 +247,47 @@ function buildRowsByObservation(rows: QcewDataRow[]) {
   return rowsByObservation;
 }
 
-function buildTotalsByYear(rows: QcewDataRow[]) {
+function getLocationQuotientMetricValue(
+  row: QcewDataRow,
+  metricKey: LocationQuotientMetricKey,
+) {
+  if (metricKey === "estab") {
+    return row.establishments;
+  }
+
+  if (metricKey === "avgemp") {
+    return row.averageEmployment;
+  }
+
+  if (metricKey === "totwage") {
+    return row.totalWages;
+  }
+
+  if (metricKey === "avgwkwage") {
+    return row.averageWeekWage;
+  }
+
+  if (metricKey === "taxwage") {
+    return row.taxableWages;
+  }
+
+  return row.contributions;
+}
+
+function buildTotalsByYear(
+  rows: QcewDataRow[],
+  metricKey: LocationQuotientMetricKey,
+) {
   const totalsByYear = new Map<number, number>();
 
   for (const row of rows) {
-    if (row.industryCode !== "00" || row.averageEmployment === null) {
+    const metricValue = getLocationQuotientMetricValue(row, metricKey);
+
+    if (row.industryCode !== "00" || metricValue === null) {
       continue;
     }
 
-    totalsByYear.set(row.year, row.averageEmployment);
+    totalsByYear.set(row.year, metricValue);
   }
 
   return totalsByYear;
@@ -217,6 +309,20 @@ function collectYears(rows: QcewDataRow[]) {
 
 export function getDefaultLocationQuotientConfig() {
   return DEFAULT_LOCATION_QUOTIENT_CONFIG;
+}
+
+export function getLocationQuotientMetricOptions() {
+  return LOCATION_QUOTIENT_METRIC_OPTIONS;
+}
+
+export function getLocationQuotientMetricOption(
+  metricKey: LocationQuotientMetricKey,
+) {
+  return (
+    LOCATION_QUOTIENT_METRIC_OPTIONS.find(
+      (metric) => metric.value === metricKey,
+    ) ?? LOCATION_QUOTIENT_METRIC_OPTIONS[0]
+  );
 }
 
 export function normalizeQcewMetadataOptions(
@@ -281,7 +387,12 @@ export function normalizeQcewRows(rawRows: unknown): QcewDataRow[] {
       year,
       periodType,
       industryCode,
+      establishments: getNumberValue(record, "estab"),
       averageEmployment: getNumberValue(record, "avgemp"),
+      totalWages: getNumberValue(record, "totwage"),
+      averageWeekWage: getNumberValue(record, "avgwkwage"),
+      taxableWages: getNumberValue(record, "taxwage"),
+      contributions: getNumberValue(record, "contrib"),
     });
   }
 
@@ -363,12 +474,20 @@ export function buildLocationQuotientFrames(args: {
   baseTotalRows: QcewDataRow[];
   industryOptions: QcewMetadataOption[];
   minimumYear: number;
+  metricKey: LocationQuotientMetricKey;
 }): BuildLocationQuotientFramesResult {
+  const metricOption = getLocationQuotientMetricOption(args.metricKey);
   const localRowsByObservation = buildRowsByObservation(args.localRows);
   const baseRowsByObservation = buildRowsByObservation(args.baseRows);
   const baseTimeRowsByCode = buildIndustryRowsByCode(args.baseTimeRows);
-  const localTotalsByYear = buildTotalsByYear(args.localTotalRows);
-  const baseTotalsByYear = buildTotalsByYear(args.baseTotalRows);
+  const localTotalsByYear = buildTotalsByYear(
+    args.localTotalRows,
+    args.metricKey,
+  );
+  const baseTotalsByYear = buildTotalsByYear(
+    args.baseTotalRows,
+    args.metricKey,
+  );
   const industryLookup = buildOptionLookup(args.industryOptions);
   const candidateIndustryCodes = args.industryOptions
     .map((option) => option.value)
@@ -406,29 +525,35 @@ export function buildLocationQuotientFrames(args: {
         buildObservationKey(year, industryCode),
       );
       const baseTimeRow = baseTimeRowsByCode.get(industryCode);
-      const localEmployment = localRow?.averageEmployment ?? null;
-      const baseEmployment = baseRow?.averageEmployment ?? null;
-      const baseYearEmployment = baseTimeRow?.averageEmployment ?? null;
+      const localValue = localRow
+        ? getLocationQuotientMetricValue(localRow, args.metricKey)
+        : null;
+      const baseValue = baseRow
+        ? getLocationQuotientMetricValue(baseRow, args.metricKey)
+        : null;
+      const baseYearValue = baseTimeRow
+        ? getLocationQuotientMetricValue(baseTimeRow, args.metricKey)
+        : null;
 
-      if (baseYearEmployment === null || baseYearEmployment <= 0) {
+      if (baseYearValue === null || baseYearValue <= 0) {
         missingBaseYearIndustryCodes.add(industryCode);
         continue;
       }
 
       if (
-        localEmployment === null ||
-        baseEmployment === null ||
-        localEmployment < 0 ||
-        baseEmployment <= 0
+        localValue === null ||
+        baseValue === null ||
+        localValue < 0 ||
+        baseValue <= 0
       ) {
         invalidObservationIndustryCodes.add(industryCode);
         continue;
       }
 
-      const localIndustryShare = localEmployment / localTotalEmployment;
-      const baseIndustryShare = baseEmployment / baseTotalEmployment;
+      const localShare = localValue / localTotalEmployment;
+      const baseShare = baseValue / baseTotalEmployment;
 
-      if (localIndustryShare < 0 || baseIndustryShare <= 0) {
+      if (localShare < 0 || baseShare <= 0) {
         invalidObservationIndustryCodes.add(industryCode);
         continue;
       }
@@ -438,13 +563,17 @@ export function buildLocationQuotientFrames(args: {
         yearLabel: String(year),
         industryCode,
         industryLabel: industryLookup.get(industryCode) ?? industryCode,
-        locationQuotient: localIndustryShare / baseIndustryShare,
-        growthSinceBaseYear: localEmployment / baseYearEmployment - 1,
-        bubbleSize: localEmployment,
-        localEmployment,
-        baseEmployment,
-        localIndustryShare,
-        baseIndustryShare,
+        metricKey: args.metricKey,
+        metricLabel: metricOption.label,
+        formatKind: metricOption.format,
+        locationQuotient: localShare / baseShare,
+        growthSinceBaseYear: localValue / baseYearValue - 1,
+        bubbleSize: localValue,
+        localValue,
+        baseValue,
+        baseYearValue,
+        localShare,
+        baseShare,
       });
     }
 

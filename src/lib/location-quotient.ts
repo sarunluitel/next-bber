@@ -4,6 +4,7 @@ import {
   buildLocationQuotientFrames,
   buildLocationQuotientSelectionSummary,
   getDefaultLocationQuotientConfig,
+  getLocationQuotientMetricOptions,
   type LocationQuotientPageData,
   type LocationQuotientRequestConfig,
   normalizeLocationQuotientSourceMetadata,
@@ -17,10 +18,11 @@ const BBER_REST_ENDPOINT = "https://api.bber.unm.edu/api/data/rest/bbertable";
 const BBER_METADATA_ENDPOINT =
   "https://api.bber.unm.edu/api/data/rest/metadata";
 
-type BberTableResponse = {
+export type BberTableResponse = {
   data?: unknown;
   metadata?: {
     table?: unknown;
+    columns?: unknown;
   };
 };
 
@@ -45,7 +47,7 @@ async function fetchExternalBberJson(
   return response.json();
 }
 
-function buildQcewSearchParams(
+export function buildQcewSearchParams(
   selection: QcewSelection | QcewPinnedSelection,
   ownershipOverride?: string,
 ) {
@@ -68,7 +70,14 @@ function buildQcewSearchParams(
   return searchParams;
 }
 
-async function fetchQcewTable(
+export function buildLocationQuotientApiUrl(
+  selection: QcewSelection | QcewPinnedSelection,
+  ownershipOverride?: string,
+) {
+  return `${BBER_REST_ENDPOINT}?${buildQcewSearchParams(selection, ownershipOverride).toString()}`;
+}
+
+export async function fetchQcewTable(
   selection: QcewSelection | QcewPinnedSelection,
   ownershipOverride?: string,
 ) {
@@ -78,7 +87,7 @@ async function fetchQcewTable(
   ) as Promise<BberTableResponse>;
 }
 
-async function fetchQcewMetadataValues(
+export async function fetchQcewMetadataValues(
   variableKeys: string[],
   searchFilters?: Record<string, string | undefined>,
 ) {
@@ -206,6 +215,7 @@ function buildLocationQuotientPageModel(args: {
     baseTotalRows: normalizeQcewRows(args.baseTotalResponse.data),
     industryOptions,
     minimumYear: args.requestConfig.baseTime.periodyear,
+    metricKey: "avgemp",
   });
   const chartTitle = "Industry Specialization and Growth Portfolio";
   const chartSubtitle = `${localSelection.geographyLabel} compared with ${baseSelection.geographyLabel} · growth since ${args.requestConfig.baseTime.periodyear}`;
@@ -226,6 +236,8 @@ function buildLocationQuotientPageModel(args: {
       chartSubtitle,
       summary:
         "Industries to the right of LQ = 1 are more concentrated locally than in the reference geography. Industries above zero have added local employment since the base year.",
+      metrics: getLocationQuotientMetricOptions(),
+      defaultMetric: "avgemp",
       frames: framesResult.frames,
       initialYear:
         framesResult.frames[framesResult.frames.length - 1]?.year ?? null,

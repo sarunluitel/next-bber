@@ -11,14 +11,15 @@ import {
 
 const BBER_REST_ENDPOINT = "https://api.bber.unm.edu/api/data/rest/bbertable";
 
-type BberTableResponse = {
+export type BberTableResponse = {
   data?: unknown;
   metadata?: {
     table?: unknown;
+    columns?: unknown;
   };
 };
 
-async function fetchPopulationPyramidResponse() {
+export function buildPopulationPyramidApiUrl() {
   const requestConfig = getDefaultPopulationPyramidConfig();
   const searchParams = new URLSearchParams({
     table: requestConfig.table,
@@ -27,12 +28,14 @@ async function fetchPopulationPyramidResponse() {
     periodtype: requestConfig.periodtype,
     variables: requestConfig.variables.join(","),
   });
-  const response = await fetch(
-    `${BBER_REST_ENDPOINT}?${searchParams.toString()}`,
-    {
-      next: { revalidate: 3600 },
-    },
-  );
+
+  return `${BBER_REST_ENDPOINT}?${searchParams.toString()}`;
+}
+
+export async function fetchPopulationPyramidResponse() {
+  const response = await fetch(buildPopulationPyramidApiUrl(), {
+    next: { revalidate: 3600 },
+  });
 
   if (!response.ok) {
     throw new Error(

@@ -16,8 +16,67 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 
 ---
 
-## 2026-03-15 - Correct population pyramid orientation and frame controls
+## 2026-03-15 - Rebuild `/data/nm-statewide/` with portable chart cards
 - **Status:** accepted
+- **Area:** visualization, architecture, routing, docs
+- **Context:** The live statewide dashboard is a dense six-chart page with
+  compact in-card controls, hover-driven tooltips, and per-chart downloads, but
+  the repo still reflected an earlier prototype phase where location quotient,
+  population pyramid, and donut work lived on standalone routes with larger
+  page wrappers, tables, and route-specific chrome.
+- **Decision:** Replace the placeholder `/data/nm-statewide/` route with a
+  production-style six-card dashboard, introduce a shared compact card shell
+  plus reusable selector, playback, and download controls, generalize the QCEW
+  location-quotient adapter to support the six production metrics, and add a
+  shared `/api/chart-download/[chartId]` export route for API, JSON, and CSV
+  ZIP downloads. Remove the standalone prototype routes for `/external/test`,
+  `/external/pyramid-test`, `/external/donut`, and `/data/location-quotient`
+  after their reusable normalization and rendering logic was folded into the
+  dashboard primitives.
+- **Why:** The live page needs dense reusable cards rather than page-sized chart
+  experiences, and keeping controls plus downloads inside portable primitives
+  makes the charting layer reusable across dashboards without carrying bulky
+  tables, prose, or source panels into every use.
+- **Validation:** Live-page and network inspection for
+  [the production statewide dashboard](https://bber.unm.edu/data/nm-statewide/),
+  `node --test src/content-models/location-quotient.test.ts`,
+  `node --test src/content-models/nm-statewide-dashboard.test.ts`,
+  `pnpm lint`, `pnpm build`, Next.js MCP `get_errors`, and browser verification
+  on the local `/data/nm-statewide` route covering card rendering, selector
+  changes, and location-quotient playback.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`,
+  `docs/ARCHITECTURE.md`, `docs/VISUALIZATION_GUIDE.md`
+- **Follow-up:** If future dashboards need tabular drill-downs, keep them as
+  separate primitives or route-level additions instead of expanding the compact
+  chart-card contract.
+
+## 2026-03-15 - Add an educational attainment donut route from `dp02`
+- **Status:** superseded
+- **Area:** visualization, architecture, routing, docs
+- **Context:** The live statewide dashboard includes a donut showing the
+  highest educational attainment reported among adults ages 25 and over, and
+  the repo needed a dedicated local route that recreates that chart from the
+  published `dp02` REST response instead of freezing values into page markup.
+- **Decision:** Add `/external/donut`, introduce a `dp02` content model plus
+  server adapter, normalize the published attainment fields into ordered donut
+  slices with live share and total derivation, and render the result with a
+  dedicated SVG donut plus a synchronized audit table fallback.
+- **Why:** This keeps the educational-attainment variable mapping, metadata
+  labels, and share math reviewable on the server while matching the external
+  chart architecture already established elsewhere in the repo.
+- **Validation:** Live-page inspection and network inspection for
+  `/data/nm-statewide/`, `node --test src/content-models/education-donut.test.ts`,
+  `pnpm lint`, `pnpm build`, Next.js MCP `get_errors`, and browser verification
+  for `/external/donut` confirming seven slices, seven audit rows, and the
+  expected statewide 2023 total.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`,
+  `docs/ARCHITECTURE.md`, `docs/VISUALIZATION_GUIDE.md`
+- **Follow-up:** If this route later gains geography or year controls, keep
+  the current server-normalized slice contract so the client does not become an
+  ad hoc `dp02` parser.
+
+## 2026-03-15 - Correct population pyramid orientation and frame controls
+- **Status:** superseded
 - **Area:** visualization, docs
 - **Context:** The first `/external/pyramid-test` pass rendered age bands from
   youngest to oldest, and duplicate `pep_cc` rows in 2020-2022 surfaced as
@@ -39,7 +98,7 @@ This file is the decision and audit ledger for architectural, dependency, workfl
   is verified.
 
 ## 2026-03-15 - Add a population pyramid prototype route from `pep_cc`
-- **Status:** accepted
+- **Status:** superseded
 - **Area:** visualization, architecture, routing, docs
 - **Context:** The live statewide dashboard includes a population pyramid fed by
   the `pep_cc` REST table, and the repo needed a dedicated local route that
@@ -64,7 +123,7 @@ This file is the decision and audit ledger for architectural, dependency, workfl
   total derivation into the client.
 
 ## 2026-03-15 - Add a QCEW location quotient portfolio route
-- **Status:** accepted
+- **Status:** superseded
 - **Area:** visualization, architecture, routing, docs
 - **Context:** The Data section needed a public location quotient view that can
   compare one configured geography with a reference geography, animate the
@@ -179,7 +238,7 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 - **Follow-up:** If subscriber authentication is implemented later, wire the FOR-UNM page to the real auth boundary instead of replacing the content model or route structure.
 
 ## 2026-03-15 - Add reusable external S0801 chart foundation with Observable Plot
-- **Status:** accepted
+- **Status:** superseded
 - **Area:** visualization, architecture, dependency, docs
 - **Context:** The repository needed a first production-grade data visualization path for the BBER REST API that could start simple with one chart and still establish durable boundaries for future chart families and richer interactions.
 - **Decision:** Add `@observablehq/plot`, create a server-only external-data fetch layer for the `s0801` REST contract, normalize selectors and chart data into app-owned view models, and ship `/external/test` as a reusable bar-chart prototype with metric, geography-type, geography, and ACS period controls plus source notes, summaries, and a tabular fallback.

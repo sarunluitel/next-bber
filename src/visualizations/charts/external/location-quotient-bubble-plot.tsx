@@ -87,11 +87,11 @@ export function LocationQuotientBubblePlot({
 
     const plot = Plot.plot({
       width: containerWidth,
-      height: 420,
+      height: 340,
       marginTop: 20,
       marginRight: 24,
-      marginBottom: 52,
-      marginLeft: 72,
+      marginBottom: 44,
+      marginLeft: 60,
       x: {
         label: "Location quotient (LQ)",
         domain: [0, maximumLocationQuotient * 1.08],
@@ -105,7 +105,7 @@ export function LocationQuotientBubblePlot({
         tickFormat: (value) => formatGrowthPercent(Number(value)),
       },
       r: {
-        range: [10, 34],
+        range: [8, 28],
       },
       marks: [
         Plot.ruleX([1], {
@@ -130,6 +130,14 @@ export function LocationQuotientBubblePlot({
           strokeWidth: 1.5,
           title: (point) => buildLocationQuotientTooltip(point),
         }),
+        Plot.tip(
+          frame.points,
+          Plot.pointer({
+            x: "locationQuotient",
+            y: "growthSinceBaseYear",
+            title: (point) => buildLocationQuotientTooltip(point),
+          }),
+        ),
       ],
     });
 
@@ -149,7 +157,7 @@ export function LocationQuotientBubblePlot({
   return (
     <div
       ref={containerReference}
-      className="min-h-[26rem] w-full rounded-[1.5rem] border border-[var(--bber-border)] bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] p-3 sm:p-4"
+      className="min-h-[21rem] w-full rounded-xl border border-[var(--bber-border)] bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] p-2 sm:p-3"
     >
       <div ref={plotReference} className="w-full" />
     </div>

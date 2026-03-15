@@ -5,6 +5,7 @@ import type { PopulationPyramidFrame } from "@/content-models/population-pyramid
 import {
   buildPopulationPyramidTooltip,
   formatCompactPopulation,
+  formatPopulationCount,
 } from "@/visualizations/formatters/population-pyramid-formatters";
 
 type PopulationPyramidChartProps = {
@@ -61,6 +62,7 @@ export function PopulationPyramidChart({
   maxBandPopulation,
 }: PopulationPyramidChartProps) {
   const { containerReference, containerWidth } = useElementWidth();
+  const [hoveredBandCode, setHoveredBandCode] = useState<number | null>(null);
 
   const chartWidth = Math.max(containerWidth, 320);
   const chartHeight = frame.bands.length * 28 + 124;
@@ -81,18 +83,50 @@ export function PopulationPyramidChart({
   const ticks = buildTickValues(maxBandPopulation);
   const centerX = margins.left + availableHalfWidth + centerGap / 2;
   const displayBands = [...frame.bands].reverse();
+  const hoveredBand =
+    displayBands.find((band) => band.ageGroupCode === hoveredBandCode) ?? null;
+  const detailLabel = hoveredBand
+    ? `${hoveredBand.ageGroupLabel}: ${formatPopulationCount(hoveredBand.malePopulation)} male, ${formatPopulationCount(hoveredBand.femalePopulation)} female`
+    : `${frame.yearLabel}: hover an age band for detail`;
+
+  function handlePointerMove(event: React.PointerEvent<SVGSVGElement>) {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const scaleY = chartHeight / bounds.height;
+    const y = (event.clientY - bounds.top) * scaleY;
+    const rowIndex = Math.floor((y - margins.top) / 28);
+    const band = displayBands[rowIndex];
+
+    if (!band) {
+      setHoveredBandCode(null);
+      return;
+    }
+
+    const rowTop = margins.top + rowIndex * 28;
+
+    if (y < rowTop || y > rowTop + rowHeight) {
+      setHoveredBandCode(null);
+      return;
+    }
+
+    setHoveredBandCode(band.ageGroupCode);
+  }
 
   return (
     <div
       ref={containerReference}
-      className="min-h-[34rem] w-full rounded-[1.5rem] border border-[var(--bber-border)] bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] p-3 sm:p-4"
+      className="min-h-[28rem] w-full rounded-xl border border-[var(--bber-border)] bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] p-3 sm:p-4"
     >
+      <div className="mb-3 rounded-lg border border-[var(--bber-border)]/80 bg-white/88 px-3 py-2 text-xs leading-5 text-[var(--bber-ink)]/72">
+        {detailLabel}
+      </div>
       {containerWidth > 0 ? (
         <svg
           role="img"
           aria-label={ariaLabel}
           viewBox={`0 0 ${chartWidth} ${chartHeight}`}
           className="h-auto w-full"
+          onPointerMove={handlePointerMove}
+          onPointerLeave={() => setHoveredBandCode(null)}
         >
           <defs>
             <linearGradient id="male-fill" x1="0%" x2="100%">

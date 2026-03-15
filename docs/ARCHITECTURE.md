@@ -45,11 +45,17 @@ JSX:
 - `src/content-models/cpi.ts` contains the normalized CPI route model for the
   trend chart, annual table, source metadata, and supporting public copy.
 - `src/content-models/location-quotient.ts` contains the QCEW request
-  contract, metadata normalization helpers, LQ math, frame validation rules,
-  and the page model for the location quotient portfolio.
+  contract, metadata normalization helpers, metric-aware LQ math, and the
+  frame contract consumed by the reusable bubble-scatter card.
+- `src/content-models/education-donut.ts` contains the `dp02` request
+  contract, educational-attainment metadata normalization helpers, slice
+  derivation, and the compact slice contract consumed by the donut chart card.
 - `src/content-models/population-pyramid.ts` contains the `pep_cc` request
   contract, age-band normalization helpers, annual frame construction, and the
-  page model for the population pyramid prototype.
+  frame contract consumed by the portable population pyramid card.
+- `src/content-models/nm-statewide-dashboard.ts` contains the compact
+  six-card dashboard contract, per-card selector catalogs, download metadata,
+  and shared source-line helpers for the statewide dashboard.
 
 This keeps the UI code ready for a future CMS-backed pages feed without mixing
 layout concerns with the data source.
@@ -101,9 +107,15 @@ Live CMS feeds are fetched on the server only:
   table and metadata endpoints, requests both selected-ownership numerators and
   all-ownership denominators, and normalizes the joined result into frame-based
   bubble-scatter data.
+- `src/lib/education-donut.ts` performs the server-only fetch against the
+  `dp02` REST table and normalizes one educational-attainment frame into
+  ordered donut slices with a shared total.
 - `src/lib/population-pyramid.ts` performs the server-only fetch against the
   `pep_cc` REST table and normalizes annual age-by-sex population rows into a
   frame-based pyramid contract.
+- `src/lib/nm-statewide-dashboard.ts` performs the server-only assembly for the
+  statewide dashboard, fetches the six live chart datasets, shapes compact
+  card-ready models, and exposes a chart-agnostic download payload registry.
 
 The publications archive mirrors the live BBER contract:
 
@@ -143,14 +155,6 @@ The staff and directors pages mirror the live BBER contract:
 - `/subscribers/[...slug]` renders local subscriber pages such as FOR-UNM
   access and the privacy policy through a dedicated content model rather than
   the generic placeholder route.
-- `/external/test` is a dynamic server-rendered prototype route for external
-  BBER REST data, currently seeded with the `s0801` commuting series and a
-  reusable chart frame intended for future line, bar, and other statistical
-  renderers.
-- `/external/pyramid-test` is a dynamic server-rendered prototype route for the
-  `pep_cc` age-by-sex population series, normalized into annual frames on the
-  server and rendered locally as an animated population pyramid with a
-  synchronized table fallback.
 - `/data/apidoc` is a local static documentation route for the public data API,
   with route-owned copy and examples instead of embedded backend tooling.
 - `/data/colonias` is a local static section page for colonia methodology,
@@ -160,19 +164,21 @@ The staff and directors pages mirror the live BBER contract:
 - `/data/cpi` is a dynamic server-rendered CPI route that reads the live BBER
   REST monthly trend and annual table endpoints while reusing the shared line
   renderer contract.
-- `/data/location-quotient` is a dynamic server-rendered QCEW route that
-  compares a local geography against a reference geography, computes
-  location-quotient shares plus base-year growth on the server, and renders the
-  result as an animated bubble portfolio with a synchronized industry table.
 - `/data/nm-duc` is a live CMS-backed conference landing page that reads the
   `duc-index` record plus the `data-conferences` archive feed from
   `api.bber.unm.edu`.
 - `/data/nm-duc/[slug]` renders individual conference pages from the same live
   archive contract and keeps dynamic params enabled so new conference slugs can
   resolve automatically after upstream updates.
+- `/data/nm-statewide` is a dynamic server-rendered dashboard route that
+  recreates the live statewide data page with six compact chart cards, shared
+  download actions, and portable client primitives for selectors and playback.
 - `/data/econindicators/` is a dynamic server-rendered dashboard route that
   recreates the live multi-chart indicators page from BBER REST sources while
   reusing one shared client line renderer across all cards.
+- `/api/chart-download/[chartId]` is a first-party route handler that serves
+  API-link redirects plus JSON and CSV ZIP exports for compact statewide chart
+  cards from the same server-normalized data boundary used for rendering.
 - `/search` is a local placeholder route used by the shared search UI shell.
 - `app/[...slug]/page.tsx` resolves known URLs from `pages.ts` and renders
   placeholder pages for the current navigation structure.
@@ -248,6 +254,9 @@ Use client components only where interaction is required:
 - news filter controls that update the URL with sanctioned query params
 - the About contact form, which uses a client-side mailto handoff and live word
   count
+- compact chart-card interactions such as variable menus, playback controls,
+  hover state, and download menus for the statewide and economic-indicators
+  dashboards
 - the collapsed past-employees disclosure on `/about/staff`
 
 Homepage, research landing, and publication result content all remain

@@ -18,10 +18,8 @@ The app currently includes:
 - a live CMS-backed news archive at `/news`
 - a local-content research landing page at `/research`
 - a live CMS-backed publications page at `/research/publications`
-- a live BBER REST API visualization prototype at `/external/test`
-- a live BBER REST API population pyramid prototype at `/external/pyramid-test`
+- a live BBER REST API statewide dashboard at `/data/nm-statewide/`
 - a live BBER REST API economic indicators dashboard at `/data/econindicators/`
-- a live BBER REST API location quotient portfolio at `/data/location-quotient`
 - a live BBER REST API CPI page at `/data/cpi`
 - a first-party API documentation page at `/data/apidoc`
 - a live CMS-backed NM Data Users Conference section at `/data/nm-duc/` with
@@ -80,13 +78,12 @@ Live CMS feeds currently come from:
 Those payloads are fetched on the server, normalized into app-owned view
 models, and then rendered by route-specific UI components.
 
-The external chart prototype uses `@observablehq/plot` for the first reusable
-time-series renderer while keeping normalization, formatting, and chart-frame
-concerns separate for future visualization types.
-
-The population pyramid prototype extends the external-data pattern with a
-server-normalized `pep_cc` adapter and a dedicated SVG age-by-sex renderer with
-year playback controls and a synchronized table.
+The statewide dashboard at `/data/nm-statewide/` uses compact, reusable chart
+cards for location quotient, educational attainment, population pyramid, and
+three time-series feeds. Each card owns its variable selector, animation
+controls when needed, muted source line, and shared API/JSON/CSV download menu
+so the same primitives can move across dashboards without dragging page-sized
+tables, summaries, or source panels with them.
 
 The economic indicators dashboard extends that same pattern with a reusable line
 renderer, a server-only adapter for multiple BBER REST tables, compact
@@ -97,10 +94,9 @@ The CPI page reuses that same Observable Plot line renderer for the published
 monthly CPI-U series while keeping the annual table and source metadata in a
 separate server-normalized route model.
 
-The location quotient page extends the same server/client split with a
-QCEW-specific adapter that joins local, reference, base-year, and all-ownership
-denominator series on the server before handing an animated bubble-scatter
-contract to a client Plot renderer.
+The location quotient, donut, and population pyramid visualizations now live as
+portable primitives inside the statewide dashboard instead of as standalone
+prototype routes.
 
 The API documentation page is a local, static route that presents public API
 guidance for researchers and faculty while omitting unsupported backend-only
@@ -155,21 +151,15 @@ pnpm build
   contract.
 - Publications filters are URL-driven so the page can be linked directly to a
   filtered archive view.
-- The external chart prototype is also URL-driven so metric and selector state
-  can be shared directly.
-- The population pyramid prototype reads the live `pep_cc` endpoint on the
-  server, normalizes annual age-by-sex frames, and renders a dedicated animated
-  pyramid with play/pause controls plus a current-year table.
+- The statewide dashboard recreates the live `/data/nm-statewide/` page with
+  six compact chart cards, portable chart-level controls, and shared download
+  actions backed by `/api/chart-download/[chartId]`.
 - The economic indicators dashboard recreates the live `/data/econindicators/`
   page with multiple charts on one page, a compact time toggle, a local search
   field for quickly narrowing cards, and shared Plot-based line rendering.
 - The CPI page reads the live `v_cpi` and `cpitab` endpoints on the server,
   renders the monthly CPI-U trend through the shared line graph component, and
   keeps the annual table tied to the same live data boundary.
-- The location quotient page reads live `qcew` table and metadata endpoints on
-  the server, computes BLS-style concentration ratios from normalized industry
-  shares, and renders an animated year-by-year bubble portfolio with a
-  synchronized audit table.
 - The API documentation page keeps the endpoint and parameter guidance local to
   this repo so the site can present supported API capabilities without
   exposing unfinished backend features in the public UI.

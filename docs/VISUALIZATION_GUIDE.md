@@ -46,22 +46,43 @@ explicit data validation, normalization, and formatting boundaries.
 For the current external-data work, keep one shared renderer contract per chart
 family. The first reusable line renderer lives at
 `src/visualizations/charts/external/line-graph.tsx`, while route-specific
-dashboard code should stay responsible only for card composition and selector
-state. Public data pages such as `/data/econindicators/` and `/data/cpi`
-should reuse that same renderer when they are presenting the same time-series
-shape instead of forking page-specific line chart components.
+dashboard code should stay responsible only for compact card composition and
+selector state. Public data pages such as `/data/nm-statewide/`,
+`/data/econindicators/`, and `/data/cpi` should reuse that same renderer when
+they are presenting the same time-series shape instead of forking
+page-specific line chart components.
 
-For scatter or portfolio views such as `/data/location-quotient`, keep the same
-split:
+For scatter or portfolio views such as the location quotient card on
+`/data/nm-statewide/`, keep the same split:
 - the server adapter owns all join logic, denominator rules, and data-quality filtering
-- the page-level client component owns frame selection, animation controls, and
-  synchronized tabular fallbacks
+- the chart-card client component owns frame selection, animation controls, and
+  compact in-card tooltip state
 - the Plot renderer receives only one already-normalized frame at a time
 
-For mirrored bar views such as `/external/pyramid-test`, keep the same split:
+For mirrored bar views such as the population pyramid card on
+`/data/nm-statewide/`, keep the same split:
 - the server adapter owns age-band cleanup, total derivation, and annual frame construction
-- the page-level client component owns year playback, scrubber state, and synchronized tabular fallbacks
+- the chart-card client component owns year playback, scrubber state, and
+  hover detail
 - the SVG renderer receives one already-normalized frame plus a shared domain maximum
+
+For donut views such as the educational-attainment card on
+`/data/nm-statewide/`, keep the same split:
+- the server adapter owns variable ordering, metadata labels, total derivation,
+  and missing-value warnings
+- the chart-card client component owns the compact legend and hover state,
+  including center-hover interactions
+- the SVG renderer receives only already-normalized slices plus the shared
+  total it should display in the center label
+
+Portable chart primitives should stay compact by default:
+- card-level controls such as variable selectors, play or pause buttons,
+  download menus, and source lines belong inside the chart primitive by
+  composition
+- large explanatory panels, methodology sections, and always-visible tables do
+  not belong inside dashboard chart cards
+- if a page needs a table fallback, render it as a separate primitive or route
+  concern instead of baking it into every chart card
 
 ## D3 usage philosophy
 Use D3 for what it is best at:

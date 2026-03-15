@@ -102,6 +102,77 @@ export function buildChartCsvZipFileName(chartTitle: string) {
   return `${sanitizeDownloadFileName(chartTitle)}.zip`;
 }
 
+function appendChartDatasetToZip(args: {
+  zip: JSZip;
+  chartTitle: string;
+  datasetLabel?: string;
+  response: BberTableResponse;
+  dataRows: RawRecord[];
+  metadataColumns: BberTableMetadataColumn[];
+}) {
+  const safeTitle = sanitizeDownloadFileName(args.chartTitle);
+  const safeDatasetLabel = args.datasetLabel
+    ? sanitizeDownloadFileName(args.datasetLabel)
+    : null;
+  const filePrefix = safeDatasetLabel
+    ? `${safeTitle}_${safeDatasetLabel}`
+    : safeTitle;
+  const rawColumnOrder = buildRawColumnOrder(
+    args.dataRows,
+    args.metadataColumns,
+  );
+  const formattedHeaderLookup = buildFormattedHeaderLookup(
+    args.metadataColumns,
+  );
+  const tableMetadataRecord = getTableMetadataRecord(args.response);
+  const tableMetadataHeaders = tableMetadataRecord
+    ? Object.keys(tableMetadataRecord)
+    : ["message"];
+  const tableMetadataRows = tableMetadataRecord
+    ? [tableMetadataHeaders.map((key) => tableMetadataRecord[key])]
+    : [["Table metadata not reported by upstream API"]];
+
+  args.zip.file(
+    `${filePrefix}_table_metadata.csv`,
+    buildCsvContent(tableMetadataHeaders, tableMetadataRows),
+  );
+
+  args.zip.file(
+    `${filePrefix}_columns_metadata.csv`,
+    buildCsvContent(
+      ["table_name", "column_name", "display_name", "column_description"],
+      args.metadataColumns.map((column) => [
+        column.table_name,
+        column.column_name,
+        column.display_name,
+        column.column_description,
+      ]),
+    ),
+  );
+
+  args.zip.file(
+    `${filePrefix}_formatted_data.csv`,
+    buildCsvContent(
+      rawColumnOrder.map(
+        (columnKey) => formattedHeaderLookup.get(columnKey) ?? columnKey,
+      ),
+      args.dataRows.map((row) =>
+        rawColumnOrder.map((columnKey) => row[columnKey]),
+      ),
+    ),
+  );
+
+  args.zip.file(
+    `${filePrefix}.csv`,
+    buildCsvContent(
+      rawColumnOrder,
+      args.dataRows.map((row) =>
+        rawColumnOrder.map((columnKey) => row[columnKey]),
+      ),
+    ),
+  );
+}
+
 export async function buildChartCsvZipBuffer({
   chartTitle,
   response,
@@ -114,53 +185,38 @@ export async function buildChartCsvZipBuffer({
   metadataColumns: BberTableMetadataColumn[];
 }) {
   const zip = new JSZip();
-  const safeTitle = sanitizeDownloadFileName(chartTitle);
-  const rawColumnOrder = buildRawColumnOrder(dataRows, metadataColumns);
-  const formattedHeaderLookup = buildFormattedHeaderLookup(metadataColumns);
-  const tableMetadataRecord = getTableMetadataRecord(response);
+  appendChartDatasetToZip({
+    zip,
+    chartTitle,
+    response,
+    dataRows,
+    metadataColumns,
+  });
 
-  const tableMetadataHeaders = tableMetadataRecord
-    ? Object.keys(tableMetadataRecord)
-    : ["message"];
-  const tableMetadataRows = tableMetadataRecord
-    ? [tableMetadataHeaders.map((key) => tableMetadataRecord[key])]
-    : [["Table metadata not reported by upstream API"]];
+  return zip.generateAsync({ type: "nodebuffer" });
+}
 
-  zip.file(
-    `${safeTitle}_table_metadata.csv`,
-    buildCsvContent(tableMetadataHeaders, tableMetadataRows),
-  );
+export async function buildChartDatasetsCsvZipBuffer(args: {
+  chartTitle: string;
+  datasets: {
+    label: string;
+    response: BberTableResponse;
+    dataRows: RawRecord[];
+    metadataColumns: BberTableMetadataColumn[];
+  }[];
+}) {
+  const zip = new JSZip();
 
-  zip.file(
-    `${safeTitle}_columns_metadata.csv`,
-    buildCsvContent(
-      ["table_name", "column_name", "display_name", "column_description"],
-      metadataColumns.map((column) => [
-        column.table_name,
-        column.column_name,
-        column.display_name,
-        column.column_description,
-      ]),
-    ),
-  );
-
-  zip.file(
-    `${safeTitle}_formatted_data.csv`,
-    buildCsvContent(
-      rawColumnOrder.map(
-        (columnKey) => formattedHeaderLookup.get(columnKey) ?? columnKey,
-      ),
-      dataRows.map((row) => rawColumnOrder.map((columnKey) => row[columnKey])),
-    ),
-  );
-
-  zip.file(
-    `${safeTitle}.csv`,
-    buildCsvContent(
-      rawColumnOrder,
-      dataRows.map((row) => rawColumnOrder.map((columnKey) => row[columnKey])),
-    ),
-  );
+  for (const dataset of args.datasets) {
+    appendChartDatasetToZip({
+      zip,
+      chartTitle: args.chartTitle,
+      datasetLabel: dataset.label,
+      response: dataset.response,
+      dataRows: dataset.dataRows,
+      metadataColumns: dataset.metadataColumns,
+    });
+  }
 
   return zip.generateAsync({ type: "nodebuffer" });
 }

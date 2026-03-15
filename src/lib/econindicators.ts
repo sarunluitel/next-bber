@@ -176,7 +176,7 @@ function matchesResponseFilters(
   });
 }
 
-function normalizeRawRows(rows: unknown) {
+export function normalizeRawRows(rows: unknown) {
   if (!Array.isArray(rows)) {
     return [];
   }
@@ -250,7 +250,7 @@ function normalizeMetricPoints(
   );
 }
 
-function normalizeMetadataColumns(rawValue: unknown) {
+export function normalizeMetadataColumns(rawValue: unknown) {
   if (!Array.isArray(rawValue)) {
     return [];
   }

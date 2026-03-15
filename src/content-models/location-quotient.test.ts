@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildLocationQuotientFrames,
+  type LocationQuotientMetricKey,
   type QcewDataRow,
   type QcewMetadataOption,
 } from "./location-quotient.ts";
@@ -17,45 +18,54 @@ const INDUSTRY_OPTIONS: QcewMetadataOption[] = [
 function buildRow(args: {
   year: number;
   industryCode: string;
-  averageEmployment: number | null;
+  metricValue: number | null;
+  metricKey?: LocationQuotientMetricKey;
 }): QcewDataRow {
+  const metricKey = args.metricKey ?? "avgemp";
+
   return {
     geographyName: "Test geography",
     year: args.year,
     periodType: "01",
     industryCode: args.industryCode,
-    averageEmployment: args.averageEmployment,
+    establishments: metricKey === "estab" ? args.metricValue : null,
+    averageEmployment: metricKey === "avgemp" ? args.metricValue : null,
+    totalWages: metricKey === "totwage" ? args.metricValue : null,
+    averageWeekWage: metricKey === "avgwkwage" ? args.metricValue : null,
+    taxableWages: metricKey === "taxwage" ? args.metricValue : null,
+    contributions: metricKey === "contrib" ? args.metricValue : null,
   };
 }
 
 test("buildLocationQuotientFrames calculates official-style share ratios and growth", () => {
   const result = buildLocationQuotientFrames({
     localRows: [
-      buildRow({ year: 2010, industryCode: "11", averageEmployment: 20 }),
-      buildRow({ year: 2010, industryCode: "21", averageEmployment: 10 }),
-      buildRow({ year: 2020, industryCode: "11", averageEmployment: 30 }),
-      buildRow({ year: 2020, industryCode: "21", averageEmployment: 15 }),
+      buildRow({ year: 2010, industryCode: "11", metricValue: 20 }),
+      buildRow({ year: 2010, industryCode: "21", metricValue: 10 }),
+      buildRow({ year: 2020, industryCode: "11", metricValue: 30 }),
+      buildRow({ year: 2020, industryCode: "21", metricValue: 15 }),
     ],
     baseRows: [
-      buildRow({ year: 2010, industryCode: "11", averageEmployment: 10 }),
-      buildRow({ year: 2010, industryCode: "21", averageEmployment: 20 }),
-      buildRow({ year: 2020, industryCode: "11", averageEmployment: 15 }),
-      buildRow({ year: 2020, industryCode: "21", averageEmployment: 25 }),
+      buildRow({ year: 2010, industryCode: "11", metricValue: 10 }),
+      buildRow({ year: 2010, industryCode: "21", metricValue: 20 }),
+      buildRow({ year: 2020, industryCode: "11", metricValue: 15 }),
+      buildRow({ year: 2020, industryCode: "21", metricValue: 25 }),
     ],
     baseTimeRows: [
-      buildRow({ year: 2010, industryCode: "11", averageEmployment: 20 }),
-      buildRow({ year: 2010, industryCode: "21", averageEmployment: 10 }),
+      buildRow({ year: 2010, industryCode: "11", metricValue: 20 }),
+      buildRow({ year: 2010, industryCode: "21", metricValue: 10 }),
     ],
     localTotalRows: [
-      buildRow({ year: 2010, industryCode: "00", averageEmployment: 100 }),
-      buildRow({ year: 2020, industryCode: "00", averageEmployment: 120 }),
+      buildRow({ year: 2010, industryCode: "00", metricValue: 100 }),
+      buildRow({ year: 2020, industryCode: "00", metricValue: 120 }),
     ],
     baseTotalRows: [
-      buildRow({ year: 2010, industryCode: "00", averageEmployment: 200 }),
-      buildRow({ year: 2020, industryCode: "00", averageEmployment: 220 }),
+      buildRow({ year: 2010, industryCode: "00", metricValue: 200 }),
+      buildRow({ year: 2020, industryCode: "00", metricValue: 220 }),
     ],
     industryOptions: INDUSTRY_OPTIONS,
     minimumYear: 2010,
+    metricKey: "avgemp",
   });
 
   assert.equal(result.frames.length, 2);
@@ -80,26 +90,27 @@ test("buildLocationQuotientFrames calculates official-style share ratios and gro
 test("buildLocationQuotientFrames filters aggregate codes and drops industries with missing base-year employment", () => {
   const result = buildLocationQuotientFrames({
     localRows: [
-      buildRow({ year: 2015, industryCode: "10", averageEmployment: 99 }),
-      buildRow({ year: 2015, industryCode: "11", averageEmployment: 25 }),
-      buildRow({ year: 2015, industryCode: "21", averageEmployment: 8 }),
+      buildRow({ year: 2015, industryCode: "10", metricValue: 99 }),
+      buildRow({ year: 2015, industryCode: "11", metricValue: 25 }),
+      buildRow({ year: 2015, industryCode: "21", metricValue: 8 }),
     ],
     baseRows: [
-      buildRow({ year: 2015, industryCode: "10", averageEmployment: 100 }),
-      buildRow({ year: 2015, industryCode: "11", averageEmployment: 10 }),
-      buildRow({ year: 2015, industryCode: "21", averageEmployment: 4 }),
+      buildRow({ year: 2015, industryCode: "10", metricValue: 100 }),
+      buildRow({ year: 2015, industryCode: "11", metricValue: 10 }),
+      buildRow({ year: 2015, industryCode: "21", metricValue: 4 }),
     ],
     baseTimeRows: [
-      buildRow({ year: 2010, industryCode: "11", averageEmployment: 20 }),
+      buildRow({ year: 2010, industryCode: "11", metricValue: 20 }),
     ],
     localTotalRows: [
-      buildRow({ year: 2015, industryCode: "00", averageEmployment: 120 }),
+      buildRow({ year: 2015, industryCode: "00", metricValue: 120 }),
     ],
     baseTotalRows: [
-      buildRow({ year: 2015, industryCode: "00", averageEmployment: 200 }),
+      buildRow({ year: 2015, industryCode: "00", metricValue: 200 }),
     ],
     industryOptions: INDUSTRY_OPTIONS,
     minimumYear: 2010,
+    metricKey: "avgemp",
   });
 
   assert.equal(result.frames.length, 1);
@@ -116,26 +127,27 @@ test("buildLocationQuotientFrames filters aggregate codes and drops industries w
 test("buildLocationQuotientFrames omits years with zero denominators", () => {
   const result = buildLocationQuotientFrames({
     localRows: [
-      buildRow({ year: 2015, industryCode: "11", averageEmployment: 12 }),
-      buildRow({ year: 2016, industryCode: "11", averageEmployment: 14 }),
+      buildRow({ year: 2015, industryCode: "11", metricValue: 12 }),
+      buildRow({ year: 2016, industryCode: "11", metricValue: 14 }),
     ],
     baseRows: [
-      buildRow({ year: 2015, industryCode: "11", averageEmployment: 9 }),
-      buildRow({ year: 2016, industryCode: "11", averageEmployment: 10 }),
+      buildRow({ year: 2015, industryCode: "11", metricValue: 9 }),
+      buildRow({ year: 2016, industryCode: "11", metricValue: 10 }),
     ],
     baseTimeRows: [
-      buildRow({ year: 2010, industryCode: "11", averageEmployment: 8 }),
+      buildRow({ year: 2010, industryCode: "11", metricValue: 8 }),
     ],
     localTotalRows: [
-      buildRow({ year: 2015, industryCode: "00", averageEmployment: 0 }),
-      buildRow({ year: 2016, industryCode: "00", averageEmployment: 100 }),
+      buildRow({ year: 2015, industryCode: "00", metricValue: 0 }),
+      buildRow({ year: 2016, industryCode: "00", metricValue: 100 }),
     ],
     baseTotalRows: [
-      buildRow({ year: 2015, industryCode: "00", averageEmployment: 100 }),
-      buildRow({ year: 2016, industryCode: "00", averageEmployment: 110 }),
+      buildRow({ year: 2015, industryCode: "00", metricValue: 100 }),
+      buildRow({ year: 2016, industryCode: "00", metricValue: 110 }),
     ],
     industryOptions: INDUSTRY_OPTIONS,
     minimumYear: 2010,
+    metricKey: "avgemp",
   });
 
   assert.deepEqual(
@@ -146,4 +158,80 @@ test("buildLocationQuotientFrames omits years with zero denominators", () => {
     result.coverage.warningMessages.join(" "),
     /produced no plottable industries/i,
   );
+});
+
+test("buildLocationQuotientFrames supports non-employment metrics", () => {
+  const result = buildLocationQuotientFrames({
+    localRows: [
+      buildRow({
+        year: 2015,
+        industryCode: "11",
+        metricValue: 1_000,
+        metricKey: "totwage",
+      }),
+      buildRow({
+        year: 2016,
+        industryCode: "11",
+        metricValue: 1_500,
+        metricKey: "totwage",
+      }),
+    ],
+    baseRows: [
+      buildRow({
+        year: 2015,
+        industryCode: "11",
+        metricValue: 1_200,
+        metricKey: "totwage",
+      }),
+      buildRow({
+        year: 2016,
+        industryCode: "11",
+        metricValue: 1_400,
+        metricKey: "totwage",
+      }),
+    ],
+    baseTimeRows: [
+      buildRow({
+        year: 2015,
+        industryCode: "11",
+        metricValue: 1_000,
+        metricKey: "totwage",
+      }),
+    ],
+    localTotalRows: [
+      buildRow({
+        year: 2015,
+        industryCode: "00",
+        metricValue: 10_000,
+        metricKey: "totwage",
+      }),
+      buildRow({
+        year: 2016,
+        industryCode: "00",
+        metricValue: 12_000,
+        metricKey: "totwage",
+      }),
+    ],
+    baseTotalRows: [
+      buildRow({
+        year: 2015,
+        industryCode: "00",
+        metricValue: 18_000,
+        metricKey: "totwage",
+      }),
+      buildRow({
+        year: 2016,
+        industryCode: "00",
+        metricValue: 20_000,
+        metricKey: "totwage",
+      }),
+    ],
+    industryOptions: INDUSTRY_OPTIONS,
+    minimumYear: 2015,
+    metricKey: "totwage",
+  });
+
+  assert.equal(result.frames.length, 2);
+  assert.equal(result.frames[1].points[0]?.metricKey, "totwage");
+  assert.equal(result.frames[1].points[0]?.localValue, 1_500);
 });
