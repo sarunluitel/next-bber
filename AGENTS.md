@@ -61,6 +61,18 @@ Rules:
 - Charts must degrade gracefully when data is missing, partial, or malformed.
 - Every visualization should define its empty state, loading state, and error state.
 - Avoid hiding data assumptions inside component JSX.
+- Never hardcode data-dependent prose, annotations, summaries, or callouts that
+  should change when upstream data changes. Latest values, deltas, trend
+  summaries, and similar chart copy must be derived from the current normalized
+  dataset at render time.
+- Any text rendered into the public UI must be written for the intended
+  audience, not for internal implementation discussion. Do not expose phrases
+  like "prototype", "recreation", "inside the app", "LLM", "agent", or other
+  process language in page copy unless a human explicitly asks for it.
+- Shared visualization infrastructure, including renderers, formatters,
+  download helpers, and chart contracts, must use chart-agnostic naming.
+  Keep page-specific or dataset-specific language in chart configuration,
+  content models, and route wiring rather than in reusable chart utilities.
 
 ### 4) CMS content is an external contract
 The CMS is a producer of JSON. The frontend is a consumer. That boundary must be explicit.
@@ -101,6 +113,8 @@ In order of importance:
 - why a CMS normalization step exists before rendering
 - why a chart must preserve sort order from the source dataset
 - why a cache boundary is intentionally narrow
+- why public UI copy must stay audience-facing while implementation context
+  belongs in comments or docs
 
 ### Bad comment examples
 - comments that repeat variable assignments
@@ -285,6 +299,9 @@ If `package.json` is unavailable, the agent must say so explicitly and avoid inv
 ## Non-Negotiable Invariants
 - Never bypass validation at external boundaries.
 - Never hide schema assumptions inside presentational components.
+- Never freeze transient data values into visualization copy. If a scheduled or
+  external loader can change the dataset, chart prose must recompute from live
+  normalized data rather than from hardcoded numbers or dates.
 - Never weaken security-sensitive paths casually.
 - Never leave documentation stale after architecture or behavior changes.
 - Never trade human reviewability for code golf.

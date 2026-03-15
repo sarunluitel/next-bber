@@ -12,14 +12,22 @@ import {
 
 const BBER_REST_ENDPOINT = "https://api.bber.unm.edu/api/data/rest/bbertable";
 
-type BberTableResponse = {
+export type BberTableResponse = {
   data?: unknown;
   metadata?: {
     table?: unknown;
+    columns?: unknown;
   };
 };
 
-type RawRecord = Record<string, unknown>;
+export type RawRecord = Record<string, unknown>;
+
+export type BberTableMetadataColumn = {
+  table_name: string;
+  column_name: string;
+  display_name: string;
+  column_description: string;
+};
 
 async function fetchExternalBberJson(searchParams: URLSearchParams) {
   const response = await fetch(
@@ -67,6 +75,10 @@ function getNumberValue(record: RawRecord, key: string) {
 
 function buildYearRange(startYear: number, endYear: number) {
   return `[${startYear}-${endYear}]`;
+}
+
+function getCurrentIndicatorEndYear() {
+  return new Date().getUTCFullYear();
 }
 
 function parseIsoDate(value: string | null) {
@@ -164,6 +176,25 @@ function matchesResponseFilters(
   });
 }
 
+function normalizeRawRows(rows: unknown) {
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+
+  return rows.filter((row): row is RawRecord =>
+    Boolean(row && typeof row === "object"),
+  );
+}
+
+function filterIndicatorRows(
+  rows: RawRecord[],
+  responseFilters: Record<string, string> | undefined,
+) {
+  return rows.filter((record) =>
+    matchesResponseFilters(record, responseFilters),
+  );
+}
+
 function normalizeSourceMetadata(
   rawValue: unknown,
 ): EconIndicatorSourceMetadata {
@@ -188,23 +219,12 @@ function normalizeMetricPoints(
   responseFilters?: Record<string, string>,
   dateColumn?: string,
 ): EconIndicatorLinePoint[] {
-  if (!Array.isArray(rows)) {
-    return [];
-  }
-
   const pointsByTimestamp = new Map<number, EconIndicatorLinePoint>();
 
-  for (const rawRow of rows) {
-    if (!rawRow || typeof rawRow !== "object") {
-      continue;
-    }
-
-    const record = rawRow as RawRecord;
-
-    if (!matchesResponseFilters(record, responseFilters)) {
-      continue;
-    }
-
+  for (const record of filterIndicatorRows(
+    normalizeRawRows(rows),
+    responseFilters,
+  )) {
     const value = getNumberValue(record, metricKey);
     const resolvedDate = resolveObservationDate(record, dateColumn);
 
@@ -230,39 +250,98 @@ function normalizeMetricPoints(
   );
 }
 
-async function fetchIndicatorCard(
+function normalizeMetadataColumns(rawValue: unknown) {
+  if (!Array.isArray(rawValue)) {
+    return [];
+  }
+
+  return rawValue.flatMap((columnValue) => {
+    if (!columnValue || typeof columnValue !== "object") {
+      return [];
+    }
+
+    const record = columnValue as RawRecord;
+    const tableName = getStringValue(record, "table_name");
+    const columnName = getStringValue(record, "column_name");
+    const displayName = getStringValue(record, "display_name");
+    const columnDescription = getStringValue(record, "column_description");
+
+    if (!tableName || !columnName || !displayName || !columnDescription) {
+      return [];
+    }
+
+    return [
+      {
+        table_name: tableName,
+        column_name: columnName,
+        display_name: displayName,
+        column_description: columnDescription,
+      },
+    ];
+  });
+}
+
+export function buildIndicatorSearchParams(
   config: EconIndicatorCardConfig,
-): Promise<EconIndicatorCard> {
-  const currentYear = new Date().getUTCFullYear();
+  endYear = getCurrentIndicatorEndYear(),
+) {
   const queryEntries = Object.entries(config.query).filter(
     (entry): entry is [string, string] => typeof entry[1] === "string",
   );
-  const searchParams = new URLSearchParams({
+
+  return new URLSearchParams({
     table: config.table,
-    periodyear: buildYearRange(config.allStartYear, currentYear),
+    periodyear: buildYearRange(config.allStartYear, endYear),
     ...Object.fromEntries(queryEntries),
   });
+}
 
+export function buildIndicatorApiUrl(
+  config: EconIndicatorCardConfig,
+  endYear = getCurrentIndicatorEndYear(),
+) {
+  const searchParams = buildIndicatorSearchParams(config, endYear);
+  return `${BBER_REST_ENDPOINT}?${searchParams.toString()}`;
+}
+
+export async function fetchIndicatorDataset(config: EconIndicatorCardConfig) {
+  const searchParams = buildIndicatorSearchParams(config);
   const response = await fetchExternalBberJson(searchParams);
-  const source = normalizeSourceMetadata(response.metadata?.table);
+  const rawRows = normalizeRawRows(response.data);
+
+  return {
+    apiUrl: `${BBER_REST_ENDPOINT}?${searchParams.toString()}`,
+    response,
+    rawRows,
+    filteredRows: filterIndicatorRows(rawRows, config.responseFilters),
+    source: normalizeSourceMetadata(response.metadata?.table),
+    metadataColumns: normalizeMetadataColumns(response.metadata?.columns),
+  };
+}
+
+async function fetchIndicatorCard(
+  config: EconIndicatorCardConfig,
+): Promise<EconIndicatorCard> {
+  const dataset = await fetchIndicatorDataset(config);
 
   return {
     id: config.id,
     title: config.title,
     eyebrow: config.eyebrow,
     description: config.description,
+    apiUrl: dataset.apiUrl,
     defaultMetric: config.defaultMetric,
     metrics: config.metrics.map((metric) => ({
       ...metric,
       points: normalizeMetricPoints(
-        response.data,
+        dataset.filteredRows,
         metric.value,
         metric.label,
-        config.responseFilters,
+        undefined,
         config.dateColumn,
       ),
     })),
-    source,
+    source: dataset.source,
   };
 }
 

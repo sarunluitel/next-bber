@@ -216,6 +216,9 @@ The economic indicators dashboard follows the same boundary:
   and shared time-window filtering
 - every card reuses the shared line renderer contract in
   `src/visualizations/charts/external/line-graph.tsx`
+- chart downloads are served through a local route handler so JSON exports and
+  CSV ZIP generation stay server-owned and reusable across future dashboards
+- the client only owns the download menu interaction and the API-link modal
 
 ## Asset strategy
 

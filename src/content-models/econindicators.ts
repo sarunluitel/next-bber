@@ -1,9 +1,7 @@
-export type IndicatorFormatKind =
-  | "count"
-  | "percent"
-  | "currency"
-  | "decimal"
-  | "index";
+import type {
+  TimeSeriesPoint,
+  ValueFormatKind,
+} from "@/visualizations/chart-contracts";
 
 export type EconIndicatorRange = "1y" | "3y" | "5y" | "all";
 
@@ -17,20 +15,13 @@ export type EconIndicatorSourceMetadata = {
   updatedAt: string | null;
 };
 
-export type EconIndicatorLinePoint = {
-  dateIso: string;
-  timestamp: number;
-  dateLabel: string;
-  value: number;
-  seriesKey: string;
-  seriesLabel: string;
-};
+export type EconIndicatorLinePoint = TimeSeriesPoint;
 
 export type EconIndicatorMetricSeries = {
   value: string;
   label: string;
   description: string;
-  format: IndicatorFormatKind;
+  format: ValueFormatKind;
   yAxisLabel: string;
   points: EconIndicatorLinePoint[];
 };
@@ -40,6 +31,7 @@ export type EconIndicatorCard = {
   title: string;
   eyebrow: string;
   description: string;
+  apiUrl: string;
   defaultMetric: string;
   metrics: EconIndicatorMetricSeries[];
   source: EconIndicatorSourceMetadata;
@@ -57,7 +49,7 @@ type EconIndicatorMetricConfig = {
   value: string;
   label: string;
   description: string;
-  format: IndicatorFormatKind;
+  format: ValueFormatKind;
   yAxisLabel: string;
 };
 
@@ -461,3 +453,7 @@ export const ECON_INDICATOR_CARD_CONFIGS = [
     ],
   },
 ] satisfies EconIndicatorCardConfig[];
+
+export function getEconIndicatorCardConfig(cardId: string) {
+  return ECON_INDICATOR_CARD_CONFIGS.find((config) => config.id === cardId);
+}

@@ -1,11 +1,11 @@
 import type {
-  EconIndicatorLinePoint,
-  IndicatorFormatKind,
-} from "@/content-models/econindicators";
-import type {
   ExternalChartPoint,
   ExternalChartUnit,
 } from "@/content-models/external-bber";
+import type {
+  TimeSeriesPoint,
+  ValueFormatKind,
+} from "@/visualizations/chart-contracts";
 
 const PERCENT_VALUE_FORMATTER = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 1,
@@ -134,9 +134,9 @@ const DECIMAL_VALUE_FORMATTER = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 1,
 });
 
-export function formatIndicatorValue(
+export function formatTimeSeriesValue(
   value: number,
-  formatKind: IndicatorFormatKind,
+  formatKind: ValueFormatKind,
   detailed = false,
 ) {
   if (formatKind === "percent") {
@@ -162,9 +162,9 @@ export function formatIndicatorValue(
   return DECIMAL_VALUE_FORMATTER.format(value);
 }
 
-export function formatIndicatorTick(
+export function formatTimeSeriesTick(
   value: number,
-  formatKind: IndicatorFormatKind,
+  formatKind: ValueFormatKind,
 ) {
   if (formatKind === "currency") {
     return CURRENCY_COMPACT_FORMATTER.format(value);
@@ -181,22 +181,24 @@ export function formatIndicatorTick(
   return DECIMAL_VALUE_FORMATTER.format(value);
 }
 
-export function buildIndicatorTooltip(
-  point: EconIndicatorLinePoint,
-  formatKind: IndicatorFormatKind,
+export function buildTimeSeriesTooltip(
+  point: TimeSeriesPoint,
+  formatKind: ValueFormatKind,
 ) {
   return [
     `${point.seriesLabel}`,
     `Date: ${point.dateLabel}`,
-    `Value: ${formatIndicatorValue(point.value, formatKind, true)}`,
+    `Value: ${formatTimeSeriesValue(point.value, formatKind, true)}`,
   ].join("\n");
 }
 
-export function buildIndicatorTrendSummary(
-  points: EconIndicatorLinePoint[],
+export function buildTimeSeriesTrendSummary(
+  points: TimeSeriesPoint[],
   label: string,
-  formatKind: IndicatorFormatKind,
+  formatKind: ValueFormatKind,
 ) {
+  // Keep summary copy derived from the current series so it stays correct when
+  // upstream loader scripts refresh the underlying data.
   if (points.length === 0) {
     return "No published values are available for the current time window.";
   }
@@ -205,7 +207,7 @@ export function buildIndicatorTrendSummary(
   const lastPoint = points[points.length - 1];
 
   if (points.length === 1) {
-    return `${label} is ${formatIndicatorValue(lastPoint.value, formatKind, true)} on ${lastPoint.dateLabel}.`;
+    return `${label} is ${formatTimeSeriesValue(lastPoint.value, formatKind, true)} on ${lastPoint.dateLabel}.`;
   }
 
   let direction = "changed";
@@ -216,5 +218,5 @@ export function buildIndicatorTrendSummary(
     direction = "decreased";
   }
 
-  return `${label} ${direction} from ${formatIndicatorValue(firstPoint.value, formatKind, true)} on ${firstPoint.dateLabel} to ${formatIndicatorValue(lastPoint.value, formatKind, true)} on ${lastPoint.dateLabel}.`;
+  return `${label} ${direction} from ${formatTimeSeriesValue(firstPoint.value, formatKind, true)} on ${firstPoint.dateLabel} to ${formatTimeSeriesValue(lastPoint.value, formatKind, true)} on ${lastPoint.dateLabel}.`;
 }

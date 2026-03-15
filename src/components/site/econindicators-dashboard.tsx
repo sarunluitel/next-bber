@@ -1,8 +1,33 @@
 "use client";
 
-import { SearchIcon } from "lucide-react";
+import {
+  CopyIcon,
+  DatabaseIcon,
+  DownloadIcon,
+  ExternalLinkIcon,
+  FileJsonIcon,
+  FileSpreadsheetIcon,
+  SearchIcon,
+} from "lucide-react";
 import { useDeferredValue, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -20,14 +45,14 @@ import type {
   EconIndicatorLinePoint,
   EconIndicatorRange,
   EconIndicatorsPageData,
-  IndicatorFormatKind,
 } from "@/content-models/econindicators";
 import { cn } from "@/lib/utils";
+import type { ValueFormatKind } from "@/visualizations/chart-contracts";
 import { LineGraph } from "@/visualizations/charts/external/line-graph";
 import {
-  buildIndicatorTrendSummary,
+  buildTimeSeriesTrendSummary,
   formatExternalAsOfDate,
-  formatIndicatorValue,
+  formatTimeSeriesValue,
 } from "@/visualizations/formatters/external-chart-formatters";
 
 type EconIndicatorsDashboardProps = {
@@ -59,17 +84,17 @@ function filterPointsByRange(
 
 function buildLatestValue(
   points: EconIndicatorLinePoint[],
-  format: IndicatorFormatKind,
+  format: ValueFormatKind,
 ) {
   const latestPoint = points[points.length - 1];
   return latestPoint
-    ? formatIndicatorValue(latestPoint.value, format, true)
+    ? formatTimeSeriesValue(latestPoint.value, format, true)
     : "Not reported";
 }
 
 function buildChangeLabel(
   points: EconIndicatorLinePoint[],
-  format: IndicatorFormatKind,
+  format: ValueFormatKind,
 ) {
   if (points.length < 2) {
     return "Not enough observations";
@@ -84,7 +109,7 @@ function buildChangeLabel(
     return `Flat from previous observation`;
   }
 
-  return `${direction === "up" ? "Up" : "Down"} ${formatIndicatorValue(Math.abs(difference), format, true)} from previous observation`;
+  return `${direction === "up" ? "Up" : "Down"} ${formatTimeSeriesValue(Math.abs(difference), format, true)} from previous observation`;
 }
 
 export function EconIndicatorsDashboard({
@@ -130,17 +155,16 @@ export function EconIndicatorsDashboard({
         <div className="grid gap-8 px-6 py-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)] lg:px-8 lg:py-10">
           <div className="space-y-4">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--bber-red)]">
-              Dashboard Recreation
+              New Mexico Data
             </p>
             <h1 className="font-display text-4xl text-[var(--bber-red)] sm:text-5xl">
               NM Economic Indicators
             </h1>
             <p className="max-w-4xl text-base leading-8 text-[var(--bber-ink)]/80">
-              This dashboard recreates the live economic indicators experience
-              as a responsive, API-driven page inside the new app. Each chart
-              shares the same line renderer, while metric selection stays
-              compact and the time window is controlled once at the dashboard
-              level.
+              Track labor market conditions, energy activity, construction, air
+              traffic, and financial indicators in one view. Use the search
+              field, metric controls, and date range selector to focus on the
+              measures most relevant to your analysis.
             </p>
 
             <div className="max-w-xl">
@@ -169,7 +193,7 @@ export function EconIndicatorsDashboard({
                 Time Window
               </CardTitle>
               <p className="text-sm leading-7 text-[var(--bber-ink)]/70">
-                Apply one concise time selector across the dashboard.
+                Choose the period shown across the indicator panels.
               </p>
             </CardHeader>
             <CardContent className="px-6 pb-6">
@@ -204,7 +228,7 @@ export function EconIndicatorsDashboard({
               </ToggleGroup>
               <p className="mt-4 text-sm leading-7 text-[var(--bber-ink)]/70">
                 {visibleCards.length} indicator
-                {visibleCards.length === 1 ? "" : "s"} currently visible.
+                {visibleCards.length === 1 ? "" : "s"} shown.
               </p>
             </CardContent>
           </Card>
@@ -267,7 +291,7 @@ function IndicatorCard({
   visiblePoints: EconIndicatorLinePoint[];
   onMetricChange: (value: string) => void;
 }) {
-  const trendSummary = buildIndicatorTrendSummary(
+  const trendSummary = buildTimeSeriesTrendSummary(
     visiblePoints,
     selectedMetric.label,
     selectedMetric.format,
@@ -289,18 +313,22 @@ function IndicatorCard({
             </p>
           </div>
 
-          {card.metrics.length > 1 ? (
-            <CompactMetricSelect
-              label={`${card.title} metric`}
-              value={selectedMetric.value}
-              selectedLabel={selectedMetric.label}
-              options={card.metrics.map((metric) => ({
-                value: metric.value,
-                label: metric.label,
-              }))}
-              onValueChange={onMetricChange}
-            />
-          ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            {card.metrics.length > 1 ? (
+              <CompactMetricSelect
+                label={`${card.title} metric`}
+                value={selectedMetric.value}
+                selectedLabel={selectedMetric.label}
+                options={card.metrics.map((metric) => ({
+                  value: metric.value,
+                  label: metric.label,
+                }))}
+                onValueChange={onMetricChange}
+              />
+            ) : null}
+
+            <ChartDownloadMenu card={card} />
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -343,8 +371,7 @@ function IndicatorCard({
               No published values
             </p>
             <p className="mt-2 text-sm leading-7 text-[var(--bber-ink)]/78">
-              The selected metric does not have values in the current time
-              window.
+              No values are available for this measure in the selected period.
             </p>
           </div>
         )}
@@ -387,6 +414,94 @@ function IndicatorCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function ChartDownloadMenu({ card }: { card: EconIndicatorCard }) {
+  const [isApiDialogOpen, setIsApiDialogOpen] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
+  const jsonDownloadUrl = `/api/econindicators/${card.id}/download?format=json`;
+  const csvDownloadUrl = `/api/econindicators/${card.id}/download?format=csv`;
+
+  async function handleCopyApiLink() {
+    await navigator.clipboard.writeText(card.apiUrl);
+    setCopyStatus("copied");
+
+    window.setTimeout(() => {
+      setCopyStatus("idle");
+    }, 1500);
+  }
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="outline" size="sm" className="rounded-full" />
+          }
+        >
+          <DownloadIcon data-icon="inline-start" />
+          Download
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          className="w-56 rounded-xl border border-[var(--bber-border)] bg-white"
+        >
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Data Download</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => setIsApiDialogOpen(true)}>
+              <DatabaseIcon />
+              API
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => window.location.assign(jsonDownloadUrl)}
+            >
+              <FileJsonIcon />
+              JSON Data
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => window.location.assign(csvDownloadUrl)}
+            >
+              <FileSpreadsheetIcon />
+              CSV Data (Excel)
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Dialog open={isApiDialogOpen} onOpenChange={setIsApiDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>API Endpoint</DialogTitle>
+            <DialogDescription>
+              Use this endpoint in your own workflow to retrieve the source data
+              behind this chart.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-2xl border border-[var(--bber-border)] bg-[var(--bber-sand)]/35 p-4">
+            <code className="block overflow-x-auto whitespace-pre-wrap break-all text-sm leading-7 text-[var(--bber-ink)]">
+              {card.apiUrl}
+            </code>
+          </div>
+
+          <DialogFooter showCloseButton>
+            <Button variant="outline" onClick={handleCopyApiLink}>
+              <CopyIcon data-icon="inline-start" />
+              {copyStatus === "copied" ? "Copied" : "Copy Link"}
+            </Button>
+            <Button
+              onClick={() =>
+                window.open(card.apiUrl, "_blank", "noopener,noreferrer")
+              }
+            >
+              <ExternalLinkIcon data-icon="inline-start" />
+              Open Endpoint
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

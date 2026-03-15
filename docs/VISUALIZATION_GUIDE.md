@@ -17,6 +17,22 @@ explicit data validation, normalization, and formatting boundaries.
 - If Plot is used, treat it as a rendering layer only. Data-source parsing,
   metric configuration, tooltip copy, and chart summaries should remain in
   app-owned modules.
+- Any prose that depends on changing data, such as latest values, deltas,
+  rankings, date spans, or narrative summaries, must be derived from the
+  current normalized dataset at render time. Do not hardcode numbers or dates
+  that can become stale after an upstream refresh script runs.
+- Public-facing chart copy must read as finished site content for researchers,
+  faculty, policy audiences, and grant reviewers. Keep implementation notes,
+  migration context, and agent reasoning in comments or docs, not in rendered
+  HTML.
+- If a chart offers downloads, treat those exports as part of the visualization
+  contract. API links, JSON payloads, and CSV/ZIP generation should be driven
+  from the same normalized server boundary as the chart data rather than from
+  ad hoc client transforms.
+- Name shared chart infrastructure so it can move across dashboards without
+  carrying page-specific language. Dataset or page terminology belongs in the
+  config that initializes a chart, not in generic renderers, formatters, or
+  export helpers.
 
 ## Recommended layering
 - `content-models/` → metric catalogs, selector normalization, and external
@@ -60,6 +76,9 @@ Use Observable Plot for what it is best at:
 - Keep tooltip logic and formatting logic reviewable.
 - If an upstream dataset ignores request filters or mixes multiple series in one
   response, resolve that in the server normalization layer before rendering.
+- Do not ship chart annotations or summaries that embed transient data values
+  unless those values are computed from the live normalized series on each
+  render.
 
 ## Trigger for documentation updates
 Update this file when:

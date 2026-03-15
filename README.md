@@ -68,7 +68,8 @@ concerns separate for future visualization types.
 
 The economic indicators dashboard extends that same pattern with a reusable line
 renderer, a server-only adapter for multiple BBER REST tables, compact
-dashboard-level time filtering, and per-card metric selectors.
+dashboard-level time filtering, per-card metric selectors, and researcher-facing
+download actions for API links, direct JSON, and CSV ZIP exports.
 
 ## Development
 

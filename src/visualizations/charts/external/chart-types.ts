@@ -1,11 +1,11 @@
 import type {
-  EconIndicatorLinePoint,
-  IndicatorFormatKind,
-} from "@/content-models/econindicators";
-import type {
   ExternalChartPoint,
   ExternalChartUnit,
 } from "@/content-models/external-bber";
+import type {
+  TimeSeriesPoint,
+  ValueFormatKind,
+} from "@/visualizations/chart-contracts";
 
 export type ExternalChartRendererProps = {
   ariaLabel: string;
@@ -26,7 +26,7 @@ export type ExternalChartModel = {
 
 export type LineGraphRendererProps = {
   ariaLabel: string;
-  data: EconIndicatorLinePoint[];
-  formatKind: IndicatorFormatKind;
+  data: TimeSeriesPoint[];
+  formatKind: ValueFormatKind;
   yAxisLabel: string;
 };

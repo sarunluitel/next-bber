@@ -26,6 +26,37 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 - **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`, `docs/VISUALIZATION_GUIDE.md`
 - **Follow-up:** Add a formal test harness for the indicator adapters, expand the dashboard card catalog to the remaining live tables, and decide whether per-card annotations or downloadable tables should become part of the shared chart frame.
 
+## 2026-03-15 - Ban hardcoded data-dependent visualization copy
+- **Status:** accepted
+- **Area:** visualization, workflow, docs
+- **Context:** Visualization pages will depend on upstream datasets that are refreshed by independent scripts, so any prose that embeds transient numbers or dates can silently go stale even when the chart itself still updates.
+- **Decision:** Treat data-dependent copy as part of the visualization data contract. Trend summaries, latest-value callouts, change labels, rankings, and similar chart prose must always be computed from the current normalized dataset at render time rather than hardcoded into JSX or content models.
+- **Why:** The project expects many more dashboards and chart types, and teams cannot realistically audit every chart by hand after every upstream data refresh.
+- **Validation:** Reviewed the `/data/econindicators/` page and confirmed the trend summary, latest value, and change label are derived from normalized series points in `src/components/site/econindicators-dashboard.tsx` and `src/visualizations/formatters/external-chart-formatters.ts`.
+- **Docs updated:** `AGENTS.md`, `docs/AGENT_NOTES.md`, `docs/VISUALIZATION_GUIDE.md`
+- **Follow-up:** Keep this invariant in mind as future charts add richer annotations, downloadable tables, or narrated summaries.
+
+## 2026-03-15 - Keep rendered UI copy audience-facing
+- **Status:** accepted
+- **Area:** workflow, visualization, docs
+- **Context:** Public pages were still carrying internal framing such as "recreation" and other implementation-oriented wording that is inappropriate for external audiences reviewing the site.
+- **Decision:** Treat rendered copy as audience-facing content by default. Internal process language, agent framing, migration notes, and implementation context belong in comments, docs, or commit history rather than in page HTML.
+- **Why:** The site will be read by researchers, faculty, clients, and grant reviewers, so public copy must feel intentional and professional even while sections are still being built.
+- **Validation:** Reviewed and updated the `/data/econindicators/` page copy to remove internal framing and replaced it with audience-oriented language.
+- **Docs updated:** `AGENTS.md`, `docs/AGENT_NOTES.md`, `docs/VISUALIZATION_GUIDE.md`
+- **Follow-up:** Apply the same review to future routes before handoff, especially dashboards, placeholders, and newly recreated pages.
+
+## 2026-03-15 - Add researcher-facing chart downloads to the economic indicators dashboard
+- **Status:** accepted
+- **Area:** visualization, architecture, dependency, docs
+- **Context:** Economic researchers need direct access to the chart source endpoint and export files for their own scripts, while the live indicators page already exposes API, JSON, and CSV-based downloads per chart.
+- **Decision:** Add a per-card download menu on `/data/econindicators/`, show the upstream API endpoint in a modal, serve direct JSON downloads through a local route handler, and generate live-style CSV ZIP exports containing raw data, formatted data, table metadata, and columns metadata. Add `jszip` for ZIP generation.
+- **Naming follow-up:** Keep shared export and chart helpers page-agnostic so future dashboards can reuse them without inheriting economic-indicators-specific naming. Reserve dataset-specific language for chart configuration and route-level wiring.
+- **Why:** This keeps downloads consistent with the visualization data contract and avoids reimplementing export logic separately in each future chart.
+- **Validation:** Live-site interaction review for the download menu, plus local validation through `pnpm lint`, `pnpm build`, and browser verification of per-card download actions.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`, `docs/VISUALIZATION_GUIDE.md`
+- **Follow-up:** Reuse the same export route pattern for future dashboard families and decide whether full-table exports should later expose user-controlled filters beyond the current chart scope.
+
 ## 2026-03-15 - Add reusable external S0801 chart foundation with Observable Plot
 - **Status:** accepted
 - **Area:** visualization, architecture, dependency, docs

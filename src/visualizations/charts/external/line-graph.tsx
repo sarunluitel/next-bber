@@ -3,8 +3,8 @@
 import * as Plot from "@observablehq/plot";
 import { useEffect, useRef, useState } from "react";
 import {
-  buildIndicatorTooltip,
-  formatIndicatorTick,
+  buildTimeSeriesTooltip,
+  formatTimeSeriesTick,
 } from "@/visualizations/formatters/external-chart-formatters";
 import type { LineGraphRendererProps } from "./chart-types";
 
@@ -60,7 +60,7 @@ export function LineGraph({
       y: {
         label: yAxisLabel,
         grid: true,
-        tickFormat: (value) => formatIndicatorTick(Number(value), formatKind),
+        tickFormat: (value) => formatTimeSeriesTick(Number(value), formatKind),
       },
       marks: [
         Plot.ruleY([0], { stroke: "var(--bber-border)" }),
@@ -84,14 +84,14 @@ export function LineGraph({
           fill: "white",
           stroke: "var(--bber-red)",
           r: containerWidth < 520 ? 3.25 : 4.5,
-          title: (point) => buildIndicatorTooltip(point, formatKind),
+          title: (point) => buildTimeSeriesTooltip(point, formatKind),
         }),
         Plot.tip(
           data,
           Plot.pointerX({
             x: (point) => new Date(point.dateIso),
             y: "value",
-            title: (point) => buildIndicatorTooltip(point, formatKind),
+            title: (point) => buildTimeSeriesTooltip(point, formatKind),
           }),
         ),
       ],
