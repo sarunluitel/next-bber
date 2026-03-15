@@ -13,11 +13,16 @@ The app currently includes:
 - a fully implemented About section, including static services/history/helpful
   links/contact pages plus live CMS-backed staff and director directories and
   bio pages
+- a fully implemented Subscribers section with local-content landing, privacy
+  policy, and FOR-UNM access pages
 - a live CMS-backed news archive at `/news`
 - a local-content research landing page at `/research`
 - a live CMS-backed publications page at `/research/publications`
 - a live BBER REST API visualization prototype at `/external/test`
 - a live BBER REST API economic indicators dashboard at `/data/econindicators/`
+- a first-party API documentation page at `/data/apidoc`
+- a live CMS-backed NM Data Users Conference section at `/data/nm-duc/` with
+  automatically discoverable conference detail pages
 - live server-side CMS feeds for homepage news and publications
 - a local `pages.ts` site tree used for navigation and placeholder routes
 - a shared data-driven section sidebar for nested pages under Data, Research,
@@ -35,6 +40,7 @@ Stable site structure and homepage chrome content live locally:
 - `src/content-models/homepage-content.ts`
 - `src/content-models/research-content.ts`
 - `src/content-models/about-content.ts`
+- `src/content-models/subscribers-content.ts`
 - `src/content-models/bber-about-people.ts`
 
 Production-host rule:
@@ -58,6 +64,9 @@ Live CMS feeds currently come from:
 - `https://api.bber.unm.edu/api/bber-research/publications?year=YYYY&category=ID&community=ID&limit=100`
 - `https://api.bber.unm.edu/api/data/rest/metadata?api=tablevalues&table=s0801&variables=[...]`
 - `https://api.bber.unm.edu/api/data/rest/bbertable?table=s0801&...`
+- `https://api.bber.unm.edu/api/bber-data-pages/duc-index`
+- `https://api.bber.unm.edu/api/bber-data-pages?group=data-conferences`
+- `https://api.bber.unm.edu/api/bber-data-pages/{slug}`
 
 Those payloads are fetched on the server, normalized into app-owned view
 models, and then rendered by route-specific UI components.
@@ -70,6 +79,14 @@ The economic indicators dashboard extends that same pattern with a reusable line
 renderer, a server-only adapter for multiple BBER REST tables, compact
 dashboard-level time filtering, per-card metric selectors, and researcher-facing
 download actions for API links, direct JSON, and CSV ZIP exports.
+
+The API documentation page is a local, static route that presents public API
+guidance for researchers and faculty while omitting unsupported backend-only
+operations tooling from the rendered page.
+
+The NM Data Users Conference section is driven directly from the BBER data-pages
+API, with the conference index and detail slugs normalized on the server so new
+conference pages can appear without hardcoded route edits.
 
 ## Development
 
@@ -101,6 +118,9 @@ pnpm build
 - Static About pages are local-content pages rendered through a dedicated About
   route layer, while staff and director directories/bio pages are fetched from
   the live CMS through the same route layer.
+- Subscribers pages are local-content pages rendered through a dedicated
+  Subscribers route layer, with the FOR-UNM page presenting the current access
+  UI without inventing unsupported authentication behavior.
 - The staff directory is split from the CMS feed into current employees and a
   collapsed `Past Employees` section based on `stoppedWorkingDate`.
 - Homepage feed failures are handled with section-level empty or error states so
@@ -114,5 +134,12 @@ pnpm build
 - The economic indicators dashboard recreates the live `/data/econindicators/`
   page with multiple charts on one page, a compact time toggle, a local search
   field for quickly narrowing cards, and shared Plot-based line rendering.
+- The API documentation page keeps the endpoint and parameter guidance local to
+  this repo so the site can present supported API capabilities without
+  exposing unfinished backend features in the public UI.
+- The NM Data Users Conference section mirrors the live `duc-index` and
+  `group=data-conferences` API contract, and detail pages must stay data-driven
+  so new conference records can render automatically when the upstream content
+  changes.
 - The contact page uses a client-side mailto form for demo-safe interaction
   without introducing a backend email dependency.

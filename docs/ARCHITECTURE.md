@@ -67,6 +67,12 @@ Live CMS feeds are fetched on the server only:
   About section.
 - `src/content-models/bber-about-people.ts` validates and normalizes raw staff
   and director payloads into the existing About page view models.
+- `src/lib/cms/bber-data-conferences.ts` performs the NM Data Users Conference
+  fetches for the conference index, archive group, and individual conference
+  detail pages.
+- `src/content-models/bber-data-conferences.ts` validates and normalizes the
+  `bber-data-pages` conference payloads into app-owned index/detail page models
+  and parses conference body content into renderable blocks.
 - `src/lib/external-bber.ts` performs server-only fetches against the BBER REST
   metadata and `bbertable` endpoints for external chart routes.
 - `src/content-models/external-bber.ts` validates selector values, curates the
@@ -113,10 +119,22 @@ The staff and directors pages mirror the live BBER contract:
   static section pages come from local content, while `/about/staff`,
   `/about/directors`, and their bio subpages are fetched from the live CMS and
   normalized before rendering.
+- `/subscribers` is a real local-content section landing page.
+- `/subscribers/[...slug]` renders local subscriber pages such as FOR-UNM
+  access and the privacy policy through a dedicated content model rather than
+  the generic placeholder route.
 - `/external/test` is a dynamic server-rendered prototype route for external
   BBER REST data, currently seeded with the `s0801` commuting series and a
   reusable chart frame intended for future line, bar, and other statistical
   renderers.
+- `/data/apidoc` is a local static documentation route for the public data API,
+  with route-owned copy and examples instead of embedded backend tooling.
+- `/data/nm-duc` is a live CMS-backed conference landing page that reads the
+  `duc-index` record plus the `data-conferences` archive feed from
+  `api.bber.unm.edu`.
+- `/data/nm-duc/[slug]` renders individual conference pages from the same live
+  archive contract and keeps dynamic params enabled so new conference slugs can
+  resolve automatically after upstream updates.
 - `/data/econindicators/` is a dynamic server-rendered dashboard route that
   recreates the live multi-chart indicators page from BBER REST sources while
   reusing one shared client line renderer across all cards.
@@ -200,6 +218,25 @@ Use client components only where interaction is required:
 Homepage, research landing, and publication result content all remain
 server-rendered. The news archive list is also server-rendered.
 
+The Subscribers section uses the same server-rendered local-content pattern:
+
+- route content comes from `src/content-models/subscribers-content.ts`
+- `/subscribers/forunm/` may present access UI without simulating unsupported
+  backend auth flows
+- privacy and subscriber-information copy stay local and reviewable
+
+The NM Data Users Conference section uses a CMS-backed long-form content
+pattern:
+
+- the route fetches the conference index page and archive feed on the server
+- conference body content is normalized before rendering, including inline
+  links, images, headings, lists, and local-route rewrites for first-party BBER
+  links
+- detail pages reuse the same archive feed so sidebar navigation and the latest
+  conference card stay in sync with upstream content
+- new conference pages must be discoverable from the archive feed without
+  adding hardcoded slugs to the route layer
+
 The external chart route keeps the same boundary:
 
 - the page and data-fetch layer remain server-rendered
@@ -219,6 +256,13 @@ The economic indicators dashboard follows the same boundary:
 - chart downloads are served through a local route handler so JSON exports and
   CSV ZIP generation stay server-owned and reusable across future dashboards
 - the client only owns the download menu interaction and the API-link modal
+
+The API documentation page follows a different boundary:
+
+- route content is local and static rather than fetched from an external source
+- the page documents supported read-only API behavior only
+- unsupported backend-only features should be omitted from public UI instead of
+  rendered as placeholders
 
 ## Asset strategy
 

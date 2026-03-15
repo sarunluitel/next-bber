@@ -16,6 +16,16 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 
 ---
 
+## 2026-03-15 - Implement the NM Data Users Conference section as live CMS-backed routes
+- **Status:** accepted
+- **Area:** routing, cms, architecture, docs
+- **Context:** The live `/data/nm-duc/` section and its individual conference pages are delivered from `api.bber.unm.edu`, but the local app was still falling through to the generic placeholder route for this section.
+- **Decision:** Add dedicated `/data/nm-duc` and `/data/nm-duc/[slug]` routes, fetch the `duc-index` record plus the `group=data-conferences` archive on the server, normalize the conference payloads into app-owned page models, and render both the index and detail pages from the live API. Keep detail routes data-driven so new conference slugs can resolve automatically after upstream updates.
+- **Why:** Conference content and archive membership belong to the upstream CMS contract, and this section needs to stay current without manual route edits whenever a new conference page is published.
+- **Validation:** Live-site network inspection for `/data/nm-duc/`, `pnpm lint`, `pnpm build`, Next.js MCP `get_errors`, and Playwright verification for `/data/nm-duc/` plus `/data/nm-duc/26th-annual-nm-data-users-conference-2024`.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`
+- **Follow-up:** If more `bber-data-pages` groups are recreated later, reuse the same server-normalization pattern and keep inline content rendering resilient to markdown-like CMS authoring.
+
 ## 2026-03-15 - Recreate the economic indicators dashboard with shared line rendering
 - **Status:** accepted
 - **Area:** visualization, architecture, routing, docs
@@ -56,6 +66,26 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 - **Validation:** Live-site interaction review for the download menu, plus local validation through `pnpm lint`, `pnpm build`, and browser verification of per-card download actions.
 - **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`, `docs/VISUALIZATION_GUIDE.md`
 - **Follow-up:** Reuse the same export route pattern for future dashboard families and decide whether full-table exports should later expose user-controlled filters beyond the current chart scope.
+
+## 2026-03-15 - Rebuild API documentation as a first-party public route
+- **Status:** accepted
+- **Area:** routing, docs, public content
+- **Context:** The live `/data/apidoc` page is public documentation for researchers and faculty, but its operations-related section and conversion tooling do not reflect the currently implemented backend support.
+- **Decision:** Add a local `/data/apidoc` route with static, site-owned API guidance and omit unsupported operations-related sections from the public page.
+- **Why:** Public documentation should match supported behavior and remain appropriate for external academic and research audiences.
+- **Validation:** Live-page review, `pnpm lint`, `pnpm build`, and browser verification of the local `/data/apidoc` route.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`
+- **Follow-up:** If backend support changes later, add new API documentation sections intentionally instead of restoring dormant tooling by default.
+
+## 2026-03-15 - Implement Subscribers section as local content routes
+- **Status:** accepted
+- **Area:** routing, docs, public content
+- **Context:** The Subscribers section was still falling through to placeholder pages even though the live site already exposes a real landing page, a privacy policy, and a FOR-UNM access page.
+- **Decision:** Add dedicated `/subscribers` and `/subscribers/[...slug]` routes backed by a local subscribers content model, recreate the public-facing landing and privacy pages, and present the FOR-UNM access page with current subscriber guidance without pretending unsupported auth flows are active.
+- **Why:** This gives the section finished public content now while preserving an honest boundary around backend-dependent subscriber authentication.
+- **Validation:** Live-page review, `pnpm lint`, `pnpm build`, and browser verification for `/subscribers/`, `/subscribers/forunm/`, and `/subscribers/PrivacyPolicy/`.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`
+- **Follow-up:** If subscriber authentication is implemented later, wire the FOR-UNM page to the real auth boundary instead of replacing the content model or route structure.
 
 ## 2026-03-15 - Add reusable external S0801 chart foundation with Observable Plot
 - **Status:** accepted
