@@ -1,11 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getPrimaryNavigationBranches, Pages } from "pages";
 import { InteractivePrimaryNav } from "@/components/site/interactive-primary-nav";
 import { Separator } from "@/components/ui/separator";
 import { homepageStaticContent } from "@/content-models/homepage-content";
 
 export function SiteHeader() {
   const { brand, utilityLinks } = homepageStaticContent;
+  const topLevelPages = getPrimaryNavigationBranches(Pages);
 
   return (
     <header className="border-b border-[var(--bber-border)] bg-white">
@@ -43,7 +45,10 @@ export function SiteHeader() {
           />
         </Link>
 
-        <InteractivePrimaryNav siteTitle={brand.siteTitle} />
+        <InteractivePrimaryNav
+          siteTitle={brand.siteTitle}
+          topLevelPages={topLevelPages}
+        />
       </div>
 
       <Separator className="bg-[var(--bber-border)]" />

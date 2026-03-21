@@ -8,13 +8,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  getPrimaryNavigationBranches,
-  type NavigationBranch,
-  type NavigationBranchItem,
-  normalizePageUrl,
-  Pages,
-} from "pages";
+import type { NavigationBranch, NavigationBranchItem, PageNode } from "pages";
 import { useEffect, useRef, useState } from "react";
 import {
   Accordion,
@@ -36,10 +30,23 @@ import { cn } from "@/lib/utils";
 
 type InteractivePrimaryNavProps = {
   siteTitle: string;
+  topLevelPages: {
+    key: string;
+    node: PageNode;
+    branch: NavigationBranch | null;
+  }[];
 };
 
 const DESKTOP_OPEN_DELAY_MS = 120;
 const DESKTOP_CLOSE_DELAY_MS = 180;
+
+function normalizePageUrl(url: string) {
+  if (url === "/") {
+    return url;
+  }
+
+  return url.replace(/\/+$/, "");
+}
 
 function isActivePath(currentPathname: string, candidateUrl: string) {
   const normalizedCurrentPathname = normalizePageUrl(currentPathname);
@@ -405,10 +412,10 @@ function MobileBranchMenu({
 
 export function InteractivePrimaryNav({
   siteTitle,
+  topLevelPages,
 }: InteractivePrimaryNavProps) {
   const pathname = usePathname();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const topLevelPages = getPrimaryNavigationBranches(Pages);
 
   useEffect(() => {
     if (pathname) {

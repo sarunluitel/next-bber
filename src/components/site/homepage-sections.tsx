@@ -62,6 +62,7 @@ export function FeedSection<T extends BberNewsItem | BberPublicationItem>({
           alt={accentImage.alt}
           width={accentImage.width}
           height={accentImage.height}
+          sizes="(max-width: 1024px) calc(100vw - 3rem), 600px"
           className="h-auto w-full rounded-md border border-[var(--bber-border)] object-cover"
         />
       </CardHeader>
@@ -149,6 +150,7 @@ export function PromoCard({
             alt={image.alt}
             width={image.width}
             height={image.height}
+            sizes="(max-width: 1024px) calc(100vw - 3rem), 600px"
             className="h-auto w-full rounded-md border border-[var(--bber-border)] object-cover transition-transform duration-300 group-hover:scale-[1.02]"
           />
         </Link>

@@ -16,6 +16,30 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 
 ---
 
+## 2026-03-20 - Move primary navigation shaping to the server
+- **Status:** accepted
+- **Area:** performance, architecture, docs
+- **Context:** The homepage had no active runtime errors, but `next-browser`
+  inspection on `http://localhost:3000/` showed the main hydrated client island
+  in the header was `InteractivePrimaryNav`, and that client component was
+  importing the full `Pages` content model plus navigation-branch builders just
+  to derive static menu structure.
+- **Decision:** Precompute the top-level navigation branches in the server
+  header and pass the serialized menu model into the client nav, while keeping
+  pathname-based active-state logic local to the client component. Add explicit
+  `sizes` hints to the homepage hero, section header art, and promo images so
+  Next.js can choose tighter image candidates on smaller viewports.
+- **Why:** This keeps the large page tree and branch-building helpers out of
+  the hydrated header bundle, preserves the current server/client boundary, and
+  reduces unnecessary image bytes without changing public behavior.
+- **Validation:** `next-browser errors`, `next-browser page`,
+  `next-browser tree`, `next-browser network`, `next-browser perf`,
+  `pnpm lint`, and browser verification on the local homepage after the change.
+- **Docs updated:** `docs/AGENT_NOTES.md`
+- **Follow-up:** If navigation work grows further, keep static information
+  architecture in server-rendered models and isolate only interaction state in
+  client components.
+
 ## 2026-03-15 - Add an AWS Amplify Gen 2 build spec
 - **Status:** accepted
 - **Area:** build, docs

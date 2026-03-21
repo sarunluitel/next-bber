@@ -20,6 +20,7 @@ export default async function Home() {
           width={hero.width}
           height={hero.height}
           preload
+          sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) calc(100vw - 3rem), 1280px"
           className="h-auto w-full rounded-lg border border-[var(--bber-border)] object-cover shadow-sm"
         />
       </section>
