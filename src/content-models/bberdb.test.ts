@@ -10,6 +10,7 @@ import {
   buildBberDbTableRows,
   buildBberDbUpstreamUnavailableMessage,
   formatBberDbDisplayValue,
+  getDefaultBberDbDataset,
   normalizeBberDbFilterOptions,
   normalizeBberDbSupportedFilterKeys,
 } from "./bberdb.ts";
@@ -154,14 +155,18 @@ test("buildBberDbFilterModel adds industry and ownership defaults for v_rp80", (
       "ownership",
     ]),
     optionsByKey: buildOptionsMap({
-      areatype: [{ value: "01", label: "County" }],
+      areatype: [
+        { value: "01", label: "State" },
+        { value: "04", label: "County" },
+      ],
       periodyear: [
         { value: "2024", label: "2024" },
         { value: "2025", label: "2025" },
+        { value: "2023", label: "2023" },
       ],
       periodtype: [
-        { value: "01", label: "Monthly" },
-        { value: "03", label: "Annual" },
+        { value: "02", label: "Quarter" },
+        { value: "03", label: "Monthly" },
       ],
       indcode: [
         { value: "00", label: "Total" },
@@ -181,10 +186,16 @@ test("buildBberDbFilterModel adds industry and ownership defaults for v_rp80", (
     "indcode",
     "ownership",
   ]);
-  assert.equal(filterModel.draftQuery.periodyear, "2025");
+  assert.equal(filterModel.draftQuery.areatype, "04");
+  assert.equal(filterModel.draftQuery.periodyear, "2025,2024");
   assert.equal(filterModel.draftQuery.periodtype, "03");
   assert.equal(filterModel.draftQuery.indcode, "00");
   assert.equal(filterModel.draftQuery.ownership, "00");
+});
+
+test("getDefaultBberDbDataset now points to Gross Receipts", () => {
+  assert.equal(getDefaultBberDbDataset().tableName, "v_rp80");
+  assert.equal(getDefaultBberDbDataset().label, "Gross Receipts");
 });
 
 test("buildBberDbFilterModel keeps requested multi-year selections in filter order", () => {

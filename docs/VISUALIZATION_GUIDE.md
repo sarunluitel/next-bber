@@ -33,6 +33,9 @@ explicit data validation, normalization, and formatting boundaries.
   contract. API links, JSON payloads, and CSV/ZIP generation should be driven
   from the same normalized server boundary as the chart data rather than from
   ad hoc client transforms.
+- Map pages follow the same rule. Choropleth layers, hover summaries, selected
+  metrics, and GIS downloads should all be driven from one normalized server
+  payload rather than from separate ad hoc fetches or client-side joins.
 - Name shared chart infrastructure so it can move across dashboards without
   carrying page-specific language. Dataset or page terminology belongs in the
   config that initializes a chart, not in generic renderers, formatters, or
@@ -90,6 +93,16 @@ Portable chart primitives should stay compact by default:
 - editorial landing pages can reuse the same chart renderers as static previews
   by passing one already-normalized frame instead of rebuilding a page-specific
   mini-chart stack
+
+Map-specific guidance:
+- Use Leaflet when the product needs raster basemaps, GeoJSON overlays,
+  hover/click geography interaction, fit-bounds behavior, and lightweight
+  choropleth rendering from a server-returned geometry payload.
+- Keep map engines client-only. The server boundary should normalize the
+  GeoJSON, metric catalog, feature summaries, and export payloads before the
+  client map component mounts.
+- If a GIS view offers spatial downloads, keep the XML metadata sidecar in the
+  same normalized export contract as the GeoJSON or shapefile archive.
 
 ## D3 usage philosophy
 Use D3 for what it is best at:

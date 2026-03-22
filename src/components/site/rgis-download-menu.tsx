@@ -8,6 +8,7 @@ import {
 import {
   DataDownloadDropdown,
   type DownloadFormat,
+  RGIS_DOWNLOAD_OPTIONS,
 } from "@/components/site/data-download-dropdown";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,9 +27,9 @@ import {
 } from "@/content-models/bberdb";
 import type { ApiEndpointPayload } from "@/lib/chart-downloads";
 
-type BberDbDownloadFormat = Extract<DownloadFormat, "api" | "json" | "csv">;
+type RgisDownloadFormat = Extract<DownloadFormat, "api" | "geojson" | "shp">;
 
-type BberDbDownloadMenuProps = {
+type RgisDownloadMenuProps = {
   appliedQuery: BberDbAppliedQuery;
   draftQuery: BberDbAppliedQuery;
   canDownloadDraft: boolean;
@@ -36,34 +37,34 @@ type BberDbDownloadMenuProps = {
   draftUnavailableMessage?: string | null;
 };
 
-function buildBberDbDownloadHref(
+function buildRgisDownloadHref(
   query: BberDbAppliedQuery,
-  format: BberDbDownloadFormat,
+  format: RgisDownloadFormat,
 ) {
   const searchParams = buildBberDbQuerySearchParams(query);
   searchParams.set("format", format);
 
-  return `/api/bberdb/download?${searchParams.toString()}`;
+  return `/api/rgis/download?${searchParams.toString()}`;
 }
 
-function triggerBberDbDownload(
+function triggerRgisDownload(
   query: BberDbAppliedQuery,
-  format: BberDbDownloadFormat,
+  format: RgisDownloadFormat,
 ) {
-  const href = buildBberDbDownloadHref(query, format);
-  window.location.assign(href);
+  window.location.assign(buildRgisDownloadHref(query, format));
 }
 
-export function BberDbDownloadMenu({
+export function RgisDownloadMenu({
   appliedQuery,
   draftQuery,
   canDownloadDraft,
   disabled = false,
   draftUnavailableMessage = null,
-}: BberDbDownloadMenuProps) {
+}: RgisDownloadMenuProps) {
   const [isPromptOpen, setIsPromptOpen] = useState(false);
-  const [pendingFormat, setPendingFormat] =
-    useState<BberDbDownloadFormat | null>(null);
+  const [pendingFormat, setPendingFormat] = useState<RgisDownloadFormat | null>(
+    null,
+  );
   const [isApiDialogOpen, setIsApiDialogOpen] = useState(false);
   const [isApiDialogLoading, setIsApiDialogLoading] = useState(false);
   const [apiDialogPayload, setApiDialogPayload] =
@@ -80,25 +81,6 @@ export function BberDbDownloadMenu({
   const draftDatasetLabel =
     findBberDbDatasetByTable(draftQuery.table)?.label ?? draftQuery.table;
 
-  function handleSelectFormat(format: DownloadFormat) {
-    if (format !== "api" && format !== "json" && format !== "csv") {
-      return;
-    }
-
-    if (!draftDiffersFromApplied) {
-      if (format === "api") {
-        void openApiDialog(appliedQuery);
-        return;
-      }
-
-      triggerBberDbDownload(appliedQuery, format);
-      return;
-    }
-
-    setPendingFormat(format);
-    setIsPromptOpen(true);
-  }
-
   async function openApiDialog(query: BberDbAppliedQuery) {
     setIsApiDialogOpen(true);
     setIsApiDialogLoading(true);
@@ -106,10 +88,9 @@ export function BberDbDownloadMenu({
     setApiDialogErrorMessage(null);
 
     try {
-      const payload = await readApiEndpointPayload(
-        buildBberDbDownloadHref(query, "api"),
+      setApiDialogPayload(
+        await readApiEndpointPayload(buildRgisDownloadHref(query, "api")),
       );
-      setApiDialogPayload(payload);
     } catch (error) {
       setApiDialogErrorMessage(
         error instanceof Error && error.message.trim().length > 0
@@ -119,6 +100,25 @@ export function BberDbDownloadMenu({
     } finally {
       setIsApiDialogLoading(false);
     }
+  }
+
+  function handleSelectFormat(format: DownloadFormat) {
+    if (format !== "api" && format !== "geojson" && format !== "shp") {
+      return;
+    }
+
+    if (!draftDiffersFromApplied) {
+      if (format === "api") {
+        void openApiDialog(appliedQuery);
+        return;
+      }
+
+      triggerRgisDownload(appliedQuery, format);
+      return;
+    }
+
+    setPendingFormat(format);
+    setIsPromptOpen(true);
   }
 
   function handleSelectSource(query: BberDbAppliedQuery) {
@@ -134,7 +134,7 @@ export function BberDbDownloadMenu({
       return;
     }
 
-    triggerBberDbDownload(query, pendingFormat);
+    triggerRgisDownload(query, pendingFormat);
     setPendingFormat(null);
   }
 
@@ -142,6 +142,7 @@ export function BberDbDownloadMenu({
     <>
       <DataDownloadDropdown
         disabled={disabled}
+        options={RGIS_DOWNLOAD_OPTIONS}
         onSelectFormat={handleSelectFormat}
       />
 
@@ -160,7 +161,7 @@ export function BberDbDownloadMenu({
             <DialogTitle>Choose download source</DialogTitle>
             <DialogDescription>
               The filter controls have changed since the last load. Choose
-              whether to download the currently loaded table or the draft
+              whether to download the currently loaded map or the draft
               selection still waiting to be loaded.
             </DialogDescription>
           </DialogHeader>
@@ -172,7 +173,7 @@ export function BberDbDownloadMenu({
               onClick={() => handleSelectSource(appliedQuery)}
             >
               <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--bber-red)]">
-                Loaded table
+                Loaded map
               </span>
               <span className="mt-1 block text-sm leading-7 text-[var(--bber-ink)]/80">
                 {appliedDatasetLabel}

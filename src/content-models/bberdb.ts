@@ -27,6 +27,7 @@ export const BBER_DB_DATASET_CATALOG = [
     tableName: "v_rp80",
     categories: [ALL, ECONOMIC],
     source: "NM Taxation & Revenue",
+    isDefault: true,
   },
   {
     label: "Building Permits",
@@ -39,7 +40,6 @@ export const BBER_DB_DATASET_CATALOG = [
     tableName: "s0801",
     categories: [ALL, ECONOMIC],
     source: "US Census Bureau",
-    isDefault: true,
   },
   {
     label: "H1 : Redistricting table with Occupancy Status (Housing) counts.",
@@ -498,7 +498,7 @@ export const BBER_DB_DATASET_CATALOG = [
 
 export const BBER_DB_DEFAULT_TABLE =
   BBER_DB_DATASET_CATALOG.find((entry) => entry.isDefault)?.tableName ??
-  "s0801";
+  "v_rp80";
 
 export const BBER_DB_PAGE_CONTENT = {
   path: "/data/bberdb/",
@@ -559,6 +559,18 @@ export type BberDbFilterModel = {
   visibleFilterKeys: BberDbVisibleFilterKey[];
   filters: BberDbFilterDefinition[];
   draftQuery: BberDbAppliedQuery;
+};
+
+const BBER_DB_DEFAULT_QUERY_BY_TABLE: Partial<
+  Record<string, Partial<Record<BberDbVisibleFilterKey, string>>>
+> = {
+  v_rp80: {
+    areatype: "04",
+    periodyear: "2025,2024",
+    periodtype: "03",
+    indcode: "00",
+    ownership: "00",
+  },
 };
 
 export type BberDbMetadataColumn = {
@@ -882,16 +894,33 @@ function sortBberDbFilterOptions(
   });
 }
 
-function selectDefaultBberDbFilterValue(
-  filterKey: BberDbVisibleFilterKey,
-  options: BberDbFilterOption[],
-) {
-  if (options.length === 0) {
+function selectDefaultBberDbFilterValue(args: {
+  tableName: string;
+  filterKey: BberDbVisibleFilterKey;
+  options: BberDbFilterOption[];
+}) {
+  const sortedOptions = sortBberDbFilterOptions(args.filterKey, args.options);
+  const preferredValue =
+    BBER_DB_DEFAULT_QUERY_BY_TABLE[args.tableName]?.[args.filterKey];
+
+  if (preferredValue) {
+    const normalizedPreferredValue = resolveRequestedBberDbFilterValue({
+      filterKey: args.filterKey,
+      requestedValue: preferredValue,
+      options: sortedOptions,
+    });
+
+    if (normalizedPreferredValue) {
+      return normalizedPreferredValue;
+    }
+  }
+
+  if (sortedOptions.length === 0) {
     return "";
   }
 
-  if (filterKey === "periodyear") {
-    return [...options].sort((leftOption, rightOption) => {
+  if (args.filterKey === "periodyear") {
+    return [...sortedOptions].sort((leftOption, rightOption) => {
       const leftNumericValue = getNumericSortValue(leftOption.value);
       const rightNumericValue = getNumericSortValue(rightOption.value);
 
@@ -906,8 +935,8 @@ function selectDefaultBberDbFilterValue(
     })[0]?.value;
   }
 
-  if (filterKey === "periodtype") {
-    return [...options].sort((leftOption, rightOption) => {
+  if (args.filterKey === "periodtype") {
+    return [...sortedOptions].sort((leftOption, rightOption) => {
       const leftNumericValue = getNumericSortValue(leftOption.value);
       const rightNumericValue = getNumericSortValue(rightOption.value);
 
@@ -922,7 +951,7 @@ function selectDefaultBberDbFilterValue(
     })[0]?.value;
   }
 
-  return options[0]?.value ?? "";
+  return sortedOptions[0]?.value ?? "";
 }
 
 function resolveRequestedBberDbFilterValue(args: {
@@ -977,7 +1006,11 @@ export function buildBberDbDraftQuery(args: {
       continue;
     }
 
-    const fallbackValue = selectDefaultBberDbFilterValue(filterKey, options);
+    const fallbackValue = selectDefaultBberDbFilterValue({
+      tableName: args.tableName,
+      filterKey,
+      options,
+    });
 
     if (fallbackValue) {
       query[filterKey] = fallbackValue;

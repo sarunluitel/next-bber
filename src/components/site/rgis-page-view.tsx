@@ -1,6 +1,12 @@
 "use client";
 
-import { ArrowLeftIcon, LoaderCircleIcon, RefreshCwIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  LoaderCircleIcon,
+  RefreshCwIcon,
+  SearchIcon,
+} from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -12,37 +18,53 @@ import {
   readJsonApiResponse,
   YearFilterMultiSelect,
 } from "@/components/site/bber-data-bank-controls";
-import { BberDbDownloadMenu } from "@/components/site/bberdb-download-menu";
+import { RgisDownloadMenu } from "@/components/site/rgis-download-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   areBberDbQueriesEqual,
   type BberDbAppliedQuery,
   type BberDbDataCategory,
   type BberDbFilterModel,
-  type BberDbInitialPageData,
-  type BberDbTableViewModel,
   getBberDbDatasetCatalogForCategory,
 } from "@/content-models/bberdb";
+import {
+  buildRgisResultTitle,
+  type RgisFeatureSummary,
+  type RgisInitialPageData,
+  type RgisMapViewModel,
+} from "@/content-models/rgis";
 
-type BberDbPageViewProps = {
-  pageData: BberDbInitialPageData;
+const RgisLeafletMap = dynamic(
+  () =>
+    import("@/components/site/rgis-leaflet-map").then(
+      (module) => module.RgisLeafletMap,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="overflow-hidden rounded-[1.75rem] border border-[var(--bber-border)] bg-white p-4">
+        <Skeleton className="min-h-[26rem] w-full rounded-[1.5rem] lg:min-h-[44rem]" />
+      </div>
+    ),
+  },
+);
+
+type RgisPageViewProps = {
+  pageData: RgisInitialPageData;
 };
 
 function buildFiltersHref(tableName: string) {
-  return `/api/bberdb/filters?table=${encodeURIComponent(tableName)}`;
+  return `/api/rgis/filters?table=${encodeURIComponent(tableName)}`;
 }
 
-function buildTableHref(query: BberDbAppliedQuery) {
+function buildMapHref(query: BberDbAppliedQuery) {
   const searchParams = new URLSearchParams({
     table: query.table,
   });
@@ -55,39 +77,82 @@ function buildTableHref(query: BberDbAppliedQuery) {
     searchParams.set(key, value);
   }
 
-  return `/api/bberdb/table?${searchParams.toString()}`;
+  return `/api/rgis/map?${searchParams.toString()}`;
 }
 
-function renderTableHeaderLabel(header: string) {
-  const headerLines = header
-    .split(" - ")
-    .flatMap((segment) => segment.match(/\([^()]+\)|[^()]+/g) ?? [segment])
-    .map((segment) => segment.trim())
-    .filter((segment) => segment.length > 0);
+function buildDisplayedFeature(
+  mapModel: RgisMapViewModel,
+  activeYear: string,
+  hoveredFeatureId: string | null,
+  pinnedFeatureId: string | null,
+) {
+  const activeFrame =
+    mapModel.yearFrames.find((frame) => frame.year === activeYear) ??
+    mapModel.yearFrames[0] ??
+    null;
 
-  if (headerLines.length <= 1) {
-    return header;
+  if (!activeFrame) {
+    return null;
   }
 
+  if (pinnedFeatureId) {
+    const pinnedFeature = activeFrame.featureSummaries.find(
+      (feature) => feature.id === pinnedFeatureId,
+    );
+
+    if (pinnedFeature) {
+      return pinnedFeature;
+    }
+  }
+
+  if (hoveredFeatureId) {
+    const hoveredFeature = activeFrame.featureSummaries.find(
+      (feature) => feature.id === hoveredFeatureId,
+    );
+
+    if (hoveredFeature) {
+      return hoveredFeature;
+    }
+  }
+
+  return activeFrame.featureSummaries[0] ?? null;
+}
+
+function MetricRow({
+  feature,
+  metricKey,
+  label,
+  helperBreadcrumbs,
+}: {
+  feature: RgisFeatureSummary | null;
+  metricKey: string;
+  label: string;
+  helperBreadcrumbs: string[];
+}) {
+  const metricValue = feature?.metricValues[metricKey];
+
   return (
-    <span className="flex min-w-0 flex-col">
-      {headerLines.map((line, lineIndex) => (
-        <span
-          key={`${header}-${line}-${String(lineIndex)}`}
-          className={
-            lineIndex === 0
-              ? undefined
-              : "text-[0.92em] font-normal text-[var(--bber-ink)]/74"
-          }
-        >
-          {line}
-        </span>
-      ))}
-    </span>
+    <label
+      htmlFor={metricKey}
+      className="grid cursor-pointer grid-cols-[1rem_minmax(0,1fr)_auto] items-start gap-3 border-b border-[var(--bber-border)] px-4 py-4 hover:bg-[var(--bber-sand)]/42"
+    >
+      <RadioGroupItem id={metricKey} value={metricKey} />
+      <div className="min-w-0 space-y-1">
+        <p className="text-sm leading-7 text-[var(--bber-ink)]">{label}</p>
+        {helperBreadcrumbs.length > 0 ? (
+          <p className="text-xs leading-6 text-[var(--bber-ink)]/58">
+            {helperBreadcrumbs.join("  >  ")}
+          </p>
+        ) : null}
+      </div>
+      <p className="text-right text-sm leading-7 text-[var(--bber-ink)]/82">
+        {metricValue?.displayValue ?? ""}
+      </p>
+    </label>
   );
 }
 
-export function BberDbPageView({ pageData }: BberDbPageViewProps) {
+export function RgisPageView({ pageData }: RgisPageViewProps) {
   const [selectedCategory, setSelectedCategory] = useState<BberDbDataCategory>(
     pageData.categoryOptions[0] ?? "All",
   );
@@ -97,20 +162,30 @@ export function BberDbPageView({ pageData }: BberDbPageViewProps) {
   const [draftFilterModel, setDraftFilterModel] =
     useState<BberDbFilterModel | null>(pageData.initialFilterModel);
   const [appliedSelection, setAppliedSelection] = useState<BberDbAppliedQuery>(
-    pageData.initialTableModel.query,
+    pageData.initialMapModel.query,
   );
-  const [appliedTableModel, setAppliedTableModel] =
-    useState<BberDbTableViewModel>(pageData.initialTableModel);
+  const [appliedMapModel, setAppliedMapModel] = useState<RgisMapViewModel>(
+    pageData.initialMapModel,
+  );
+  const [activeYear, setActiveYear] = useState(
+    pageData.initialMapModel.activeYear,
+  );
+  const [selectedMetricKey, setSelectedMetricKey] = useState<string | null>(
+    pageData.initialMapModel.defaultMetricKey,
+  );
+  const [hoveredFeatureId, setHoveredFeatureId] = useState<string | null>(null);
+  const [pinnedFeatureId, setPinnedFeatureId] = useState<string | null>(null);
+  const [metricSearchQuery, setMetricSearchQuery] = useState("");
   const [isMetadataLoading, setIsMetadataLoading] = useState(false);
   const [metadataErrorMessage, setMetadataErrorMessage] = useState<
     string | null
   >(pageData.initialMetadataErrorMessage);
-  const [isTableLoading, setIsTableLoading] = useState(false);
-  const [tableErrorMessage, setTableErrorMessage] = useState<string | null>(
-    pageData.initialTableErrorMessage,
+  const [isMapLoading, setIsMapLoading] = useState(false);
+  const [mapErrorMessage, setMapErrorMessage] = useState<string | null>(
+    pageData.initialMapErrorMessage,
   );
   const metadataRequestIdRef = useRef(0);
-  const tableRequestIdRef = useRef(0);
+  const mapRequestIdRef = useRef(0);
   const didAttemptInitialRecoveryRef = useRef(false);
   const visibleDatasetCatalog = useMemo(
     () => getBberDbDatasetCatalogForCategory(selectedCategory),
@@ -131,10 +206,42 @@ export function BberDbPageView({ pageData }: BberDbPageViewProps) {
   );
   const canLoadDraft =
     !isMetadataLoading &&
-    !isTableLoading &&
+    !isMapLoading &&
     draftFilterModel !== null &&
     metadataErrorMessage === null &&
     draftDiffersFromApplied;
+  const activeFrame =
+    appliedMapModel.yearFrames.find((frame) => frame.year === activeYear) ??
+    appliedMapModel.yearFrames[0] ??
+    null;
+  const displayedFeature = buildDisplayedFeature(
+    appliedMapModel,
+    activeYear,
+    hoveredFeatureId,
+    pinnedFeatureId,
+  );
+  const visibleMetricOptions = appliedMapModel.metricOptions.filter(
+    (metric) => {
+      if (metricSearchQuery.trim().length === 0) {
+        return true;
+      }
+
+      const normalizedSearchQuery = metricSearchQuery.toLowerCase();
+      const searchableText = [
+        metric.label,
+        metric.description ?? "",
+        ...metric.helperBreadcrumbs,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(normalizedSearchQuery);
+    },
+  );
+  const selectedMetricLabel =
+    appliedMapModel.metricOptions.find(
+      (metricOption) => metricOption.key === selectedMetricKey,
+    )?.label ?? null;
 
   async function refreshDraftFilterModel(nextTableName: string) {
     const requestId = metadataRequestIdRef.current + 1;
@@ -165,7 +272,7 @@ export function BberDbPageView({ pageData }: BberDbPageViewProps) {
       setMetadataErrorMessage(
         buildErrorMessage(
           error,
-          "The BBER filter request could not be completed.",
+          "The RGIS filter request could not be completed.",
         ),
       );
     } finally {
@@ -175,39 +282,43 @@ export function BberDbPageView({ pageData }: BberDbPageViewProps) {
     }
   }
 
-  async function loadAppliedTable(nextQuery: BberDbAppliedQuery) {
-    const requestId = tableRequestIdRef.current + 1;
-    tableRequestIdRef.current = requestId;
-    setIsTableLoading(true);
-    setTableErrorMessage(null);
+  async function loadAppliedMap(nextQuery: BberDbAppliedQuery) {
+    const requestId = mapRequestIdRef.current + 1;
+    mapRequestIdRef.current = requestId;
+    setIsMapLoading(true);
+    setMapErrorMessage(null);
 
     try {
-      const nextTableModel = await readJsonApiResponse<BberDbTableViewModel>(
-        buildTableHref(nextQuery),
+      const nextMapModel = await readJsonApiResponse<RgisMapViewModel>(
+        buildMapHref(nextQuery),
       );
 
-      if (tableRequestIdRef.current !== requestId) {
+      if (mapRequestIdRef.current !== requestId) {
         return;
       }
 
       startTransition(() => {
-        setAppliedSelection(nextTableModel.query);
-        setAppliedTableModel(nextTableModel);
+        setAppliedSelection(nextMapModel.query);
+        setAppliedMapModel(nextMapModel);
+        setActiveYear(nextMapModel.activeYear);
+        setSelectedMetricKey(nextMapModel.defaultMetricKey);
+        setHoveredFeatureId(null);
+        setPinnedFeatureId(null);
       });
     } catch (error) {
-      if (tableRequestIdRef.current !== requestId) {
+      if (mapRequestIdRef.current !== requestId) {
         return;
       }
 
-      setTableErrorMessage(
+      setMapErrorMessage(
         buildErrorMessage(
           error,
-          "The BBER data request could not be completed.",
+          "The RGIS map request could not be completed.",
         ),
       );
     } finally {
-      if (tableRequestIdRef.current === requestId) {
-        setIsTableLoading(false);
+      if (mapRequestIdRef.current === requestId) {
+        setIsMapLoading(false);
       }
     }
   }
@@ -216,7 +327,7 @@ export function BberDbPageView({ pageData }: BberDbPageViewProps) {
     if (
       didAttemptInitialRecoveryRef.current ||
       (!pageData.initialMetadataErrorMessage &&
-        !pageData.initialTableErrorMessage)
+        !pageData.initialMapErrorMessage)
     ) {
       return;
     }
@@ -243,39 +354,40 @@ export function BberDbPageView({ pageData }: BberDbPageViewProps) {
           setDraftSelection(nextFilterModel.draftQuery);
         });
 
-        const nextTableRequestId = tableRequestIdRef.current + 1;
-        tableRequestIdRef.current = nextTableRequestId;
-        setIsTableLoading(true);
-        setTableErrorMessage(null);
+        const nextMapRequestId = mapRequestIdRef.current + 1;
+        mapRequestIdRef.current = nextMapRequestId;
+        setIsMapLoading(true);
+        setMapErrorMessage(null);
 
         try {
-          const nextTableModel =
-            await readJsonApiResponse<BberDbTableViewModel>(
-              buildTableHref(nextFilterModel.draftQuery),
-            );
+          const nextMapModel = await readJsonApiResponse<RgisMapViewModel>(
+            buildMapHref(nextFilterModel.draftQuery),
+          );
 
-          if (tableRequestIdRef.current !== nextTableRequestId) {
+          if (mapRequestIdRef.current !== nextMapRequestId) {
             return;
           }
 
           startTransition(() => {
-            setAppliedSelection(nextTableModel.query);
-            setAppliedTableModel(nextTableModel);
+            setAppliedSelection(nextMapModel.query);
+            setAppliedMapModel(nextMapModel);
+            setActiveYear(nextMapModel.activeYear);
+            setSelectedMetricKey(nextMapModel.defaultMetricKey);
           });
         } catch (error) {
-          if (tableRequestIdRef.current !== nextTableRequestId) {
+          if (mapRequestIdRef.current !== nextMapRequestId) {
             return;
           }
 
-          setTableErrorMessage(
+          setMapErrorMessage(
             buildErrorMessage(
               error,
-              "The BBER data request could not be completed.",
+              "The RGIS map request could not be completed.",
             ),
           );
         } finally {
-          if (tableRequestIdRef.current === nextTableRequestId) {
-            setIsTableLoading(false);
+          if (mapRequestIdRef.current === nextMapRequestId) {
+            setIsMapLoading(false);
           }
         }
       } catch (error) {
@@ -287,7 +399,7 @@ export function BberDbPageView({ pageData }: BberDbPageViewProps) {
         setMetadataErrorMessage(
           buildErrorMessage(
             error,
-            "The BBER filter request could not be completed.",
+            "The RGIS filter request could not be completed.",
           ),
         );
       } finally {
@@ -298,9 +410,22 @@ export function BberDbPageView({ pageData }: BberDbPageViewProps) {
     })();
   }, [
     draftSelection.table,
+    pageData.initialMapErrorMessage,
     pageData.initialMetadataErrorMessage,
-    pageData.initialTableErrorMessage,
   ]);
+
+  useEffect(() => {
+    const normalizedActiveYear =
+      appliedMapModel.yearFrames.find((frame) => frame.year === activeYear)
+        ?.year ?? appliedMapModel.activeYear;
+
+    if (normalizedActiveYear !== activeYear) {
+      setActiveYear(normalizedActiveYear);
+    }
+
+    setHoveredFeatureId(null);
+    setPinnedFeatureId(null);
+  }, [activeYear, appliedMapModel]);
 
   function handleCategoryChange(nextCategory: string) {
     const normalizedCategory = nextCategory as BberDbDataCategory;
@@ -355,10 +480,6 @@ export function BberDbPageView({ pageData }: BberDbPageViewProps) {
     });
   }
 
-  async function handleLoadTable() {
-    await loadAppliedTable(draftSelection);
-  }
-
   return (
     <div className="flex flex-col gap-8">
       <div className="overflow-hidden rounded-[2rem] border border-[var(--bber-border)] bg-[radial-gradient(circle_at_top_left,rgba(186,12,47,0.14),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(173,133,61,0.18),transparent_30%),linear-gradient(135deg,#fff_0%,#f7f2ea_48%,#eddcc4_100%)]">
@@ -396,21 +517,24 @@ export function BberDbPageView({ pageData }: BberDbPageViewProps) {
                 Loaded Result
               </CardTitle>
               <p className="text-sm leading-7 text-[var(--bber-ink)]/74">
-                {appliedTableModel.datasetLabel} is currently loaded for{" "}
-                {appliedTableModel.resultTitle}.
+                {appliedMapModel.datasetLabel} is currently loaded for{" "}
+                {buildRgisResultTitle(activeFrame?.featureSummaries ?? [])}.
               </p>
             </CardHeader>
             <CardContent className="grid gap-4 px-6 pb-6 sm:grid-cols-2">
               <div className="rounded-2xl border border-[var(--bber-border)] bg-[var(--bber-sand)]/65 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--bber-red)]">
-                  Table
+                  Geography
                 </p>
                 <p className="mt-2 font-display text-2xl text-[var(--bber-ink)]">
-                  {appliedTableModel.tableName}
+                  {activeFrame?.featureSummaries.length.toLocaleString(
+                    "en-US",
+                  ) ?? "0"}
                 </p>
                 <p className="mt-1 text-sm leading-7 text-[var(--bber-ink)]/72">
-                  {appliedTableModel.rawRowCount.toLocaleString("en-US")} row
-                  {appliedTableModel.rawRowCount === 1 ? "" : "s"} loaded
+                  geograph
+                  {activeFrame?.featureSummaries.length === 1 ? "y" : "ies"}{" "}
+                  loaded
                 </p>
               </div>
               <div className="rounded-2xl border border-[var(--bber-border)] bg-[var(--bber-sand)]/65 p-4">
@@ -418,7 +542,7 @@ export function BberDbPageView({ pageData }: BberDbPageViewProps) {
                   Source
                 </p>
                 <p className="mt-2 text-sm leading-7 text-[var(--bber-ink)]/80">
-                  {appliedTableModel.sourceLine}
+                  {appliedMapModel.sourceLine}
                 </p>
               </div>
             </CardContent>
@@ -434,19 +558,19 @@ export function BberDbPageView({ pageData }: BberDbPageViewProps) {
                 Select Data
               </CardTitle>
               <p className="max-w-4xl text-sm leading-7 text-[var(--bber-ink)]/76">
-                Change categories, datasets, and metadata filters here. The
-                loaded table below stays in place until you click Load.
+                Change categories, datasets, and map filters here. The loaded
+                map and data panel stay in place until you click Load.
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <BberDbDownloadMenu
+              <RgisDownloadMenu
                 appliedQuery={appliedSelection}
                 draftQuery={draftSelection}
                 canDownloadDraft={
                   draftFilterModel !== null && !isMetadataLoading
                 }
-                disabled={isTableLoading}
+                disabled={isMapLoading}
                 draftUnavailableMessage={metadataErrorMessage}
               />
               <Button
@@ -455,10 +579,10 @@ export function BberDbPageView({ pageData }: BberDbPageViewProps) {
                 disabled={!canLoadDraft}
                 className="h-9 rounded-full bg-[var(--bber-red)] px-4 text-white hover:bg-[color:color-mix(in_oklab,var(--bber-red),black_8%)]"
                 onClick={() => {
-                  void handleLoadTable();
+                  void loadAppliedMap(draftSelection);
                 }}
               >
-                {isTableLoading ? (
+                {isMapLoading ? (
                   <LoaderCircleIcon className="size-4 animate-spin" />
                 ) : (
                   <RefreshCwIcon className="size-4" />
@@ -482,8 +606,8 @@ export function BberDbPageView({ pageData }: BberDbPageViewProps) {
           !metadataErrorMessage &&
           draftDiffersFromApplied ? (
             <MetadataBanner tone="neutral">
-              Your updated selections are ready. Select Load to refresh the
-              table below.
+              Your updated selections are ready. Select Load to refresh the map
+              and panel below.
             </MetadataBanner>
           ) : null}
         </CardHeader>
@@ -548,73 +672,162 @@ export function BberDbPageView({ pageData }: BberDbPageViewProps) {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--bber-red)]">
-                Loaded Table
+                Loaded Map
               </p>
               <CardTitle className="font-display text-3xl text-[var(--bber-red)]">
-                {appliedTableModel.resultTitle}
+                {buildRgisResultTitle(activeFrame?.featureSummaries ?? [])}
               </CardTitle>
               <p className="max-w-4xl text-sm leading-7 text-[var(--bber-ink)]/76">
-                {appliedTableModel.description}
+                {appliedMapModel.description}
               </p>
             </div>
 
             <div className="rounded-2xl border border-[var(--bber-border)] bg-[var(--bber-sand)]/65 px-4 py-3 text-sm leading-7 text-[var(--bber-ink)]/78">
               <p className="font-medium text-[var(--bber-ink)]">
-                {appliedTableModel.datasetLabel}
+                {appliedMapModel.datasetLabel}
               </p>
-              <p>{appliedTableModel.sourceLine}</p>
+              <p>{appliedMapModel.sourceLine}</p>
             </div>
           </div>
 
-          {tableErrorMessage ? (
-            <MetadataBanner tone="warning">{tableErrorMessage}</MetadataBanner>
+          {mapErrorMessage ? (
+            <MetadataBanner tone="warning">{mapErrorMessage}</MetadataBanner>
           ) : null}
-          {isTableLoading ? (
+          {isMapLoading ? (
             <MetadataBanner tone="neutral">
-              Loading the updated table. The current results will remain visible
-              until the refreshed table is ready.
+              Loading the updated map. The current map and panel will remain
+              visible until the refreshed results are ready.
             </MetadataBanner>
           ) : null}
         </CardHeader>
 
         <CardContent className="space-y-5 px-0 pb-6">
           <Separator className="bg-[var(--bber-border)]" />
-          {appliedTableModel.rows.length > 0 ? (
-            <div className="overflow-x-auto px-6">
-              <Table className="min-w-max">
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    {appliedTableModel.columns.map((column) => (
-                      <TableHead
-                        key={column.key}
-                        title={column.description ?? undefined}
-                        className="min-w-[8rem] whitespace-normal bg-[var(--bber-sand)]/65 align-top text-[var(--bber-ink)]"
-                      >
-                        {renderTableHeaderLabel(column.header)}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {appliedTableModel.rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {appliedTableModel.columns.map((column, columnIndex) => (
-                        <TableCell key={`${row.id}-${column.key}`}>
-                          {row.cells[columnIndex]}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
+
+          {appliedMapModel.availableYears.length > 1 ? (
             <div className="px-6">
-              <div className="rounded-2xl border border-dashed border-[var(--bber-border)] bg-[var(--bber-sand)] px-5 py-8 text-sm leading-7 text-[var(--bber-ink)]/76">
-                No rows were returned for the selected filters.
+              <div className="flex flex-col gap-3 rounded-2xl border border-[var(--bber-border)] bg-[var(--bber-sand)]/48 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--bber-red)]">
+                  Active Year
+                </p>
+                <ToggleGroup
+                  value={activeYear ? [activeYear] : []}
+                  onValueChange={(nextYears) => {
+                    const nextYear = Array.isArray(nextYears)
+                      ? nextYears[0]
+                      : null;
+
+                    if (typeof nextYear === "string" && nextYear.length > 0) {
+                      setActiveYear(nextYear);
+                    }
+                  }}
+                  spacing={8}
+                >
+                  {appliedMapModel.availableYears.map((year) => (
+                    <ToggleGroupItem key={year} value={year} variant="outline">
+                      {year}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
               </div>
             </div>
-          )}
+          ) : null}
+
+          <div className="grid gap-6 px-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(22rem,0.9fr)]">
+            <div className="space-y-4">
+              <RgisLeafletMap
+                yearFrame={activeFrame}
+                activeMetricKey={selectedMetricKey}
+                activeMetricLabel={selectedMetricLabel}
+                highlightedFeatureId={hoveredFeatureId}
+                pinnedFeatureId={pinnedFeatureId}
+                onHoverFeature={(featureId) => {
+                  if (pinnedFeatureId) {
+                    return;
+                  }
+
+                  setHoveredFeatureId(featureId);
+                }}
+                onPinFeature={(featureId) => {
+                  setPinnedFeatureId((currentFeatureId) =>
+                    currentFeatureId === featureId ? null : featureId,
+                  );
+                  setHoveredFeatureId(null);
+                }}
+              />
+            </div>
+
+            <div className="min-w-0">
+              <Card className="border border-[var(--bber-border)] bg-[var(--bber-sand)]/24 py-0 shadow-none">
+                <CardHeader className="gap-4 px-5 pt-5">
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--bber-red)]">
+                      Geography Summary
+                    </p>
+                    <CardTitle className="font-display text-2xl text-[var(--bber-ink)]">
+                      {displayedFeature?.name ?? "No geography loaded"}
+                    </CardTitle>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {(displayedFeature?.summaryFields ?? []).map((field) => (
+                      <div
+                        key={field.key}
+                        className="rounded-2xl border border-[var(--bber-border)] bg-white px-4 py-3"
+                      >
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--bber-red)]">
+                          {field.label}
+                        </p>
+                        <p className="mt-1 text-sm leading-7 text-[var(--bber-ink)]/82">
+                          {field.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="relative">
+                    <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--bber-ink)]/48" />
+                    <Input
+                      value={metricSearchQuery}
+                      onChange={(event) =>
+                        setMetricSearchQuery(event.target.value)
+                      }
+                      placeholder="Search metrics"
+                      className="h-11 rounded-2xl border-[var(--bber-border)] bg-white pl-9"
+                    />
+                  </div>
+                </CardHeader>
+
+                <CardContent className="px-0 pb-0">
+                  <ScrollArea className="h-[32rem] rounded-b-[inherit]">
+                    {visibleMetricOptions.length > 0 ? (
+                      <RadioGroup
+                        value={selectedMetricKey ?? ""}
+                        onValueChange={(nextValue) =>
+                          setSelectedMetricKey(nextValue)
+                        }
+                        className="gap-0"
+                      >
+                        {visibleMetricOptions.map((metricOption) => (
+                          <MetricRow
+                            key={metricOption.key}
+                            feature={displayedFeature}
+                            metricKey={metricOption.key}
+                            label={metricOption.label}
+                            helperBreadcrumbs={metricOption.helperBreadcrumbs}
+                          />
+                        ))}
+                      </RadioGroup>
+                    ) : (
+                      <div className="px-5 py-8 text-sm leading-7 text-[var(--bber-ink)]/72">
+                        No metrics matched your search.
+                      </div>
+                    )}
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

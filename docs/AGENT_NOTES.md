@@ -16,6 +16,61 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 
 ---
 
+## 2026-03-22 - Add the `/data/rgis/` shared-selector map explorer
+- **Status:** accepted
+- **Area:** routing, architecture, visualization, cms, dependency, docs
+- **Context:** The Data navigation exposed an `RGIS` entry, but the repo still
+  lacked a first-party implementation of the live geography explorer that uses
+  the same dataset and metadata selectors as `/data/bberdb/` while loading
+  `makemap` GeoJSON for map rendering.
+- **Decision:** Extend the shared BBER data-bank stack with
+  `src/lib/bber-data-bank.ts`, add a dedicated `/data/rgis/` route plus
+  `/api/rgis/filters`, `/api/rgis/map`, and `/api/rgis/download`, normalize
+  `makemap` payloads into year frames and paired estimate plus margin metric
+  options, render the map in a client-only Leaflet component, and keep RGIS
+  downloads on the shared API modal plus download dropdown flow. Add
+  `leaflet`, `@types/leaflet`, `@mapbox/shp-write`, and a repo-owned XML
+  template so `GeoJSON + XML` and `Shapefile + XML` exports bundle the required
+  `<table>.xml` sidecar.
+- **Why:** This preserves one reusable BBER query and metadata contract across
+  tables and maps, avoids duplicating the selector pipeline, and matches the
+  live RGIS interaction model without introducing a heavier map stack than the
+  current product needs.
+- **Validation:** `node --import tsx --test src/content-models/bberdb.test.ts src/content-models/rgis.test.ts src/lib/rgis.test.ts`,
+  targeted `pnpm exec biome check`, `pnpm build`, Next.js MCP `get_errors`, and
+  Playwright verification on `http://localhost:3000/data/rgis` covering the
+  shared API modal, multi-year year selection plus active-year switching, and
+  metric-driven legend updates.
+- **Docs updated:** `AGENTS.md`, `README.md`, `docs/AGENT_NOTES.md`,
+  `docs/ARCHITECTURE.md`, `docs/CMS_CONTRACT.md`,
+  `docs/VISUALIZATION_GUIDE.md`
+- **Follow-up:** If future GIS work needs more complex vector-tile styling or
+  very large feature counts, reevaluate the map engine then. Until that need is
+  demonstrated, keep RGIS on the current Leaflet plus normalized GeoJSON
+  contract.
+
+## 2026-03-22 - Adjust RGIS map fit and wrap behavior
+- **Status:** accepted
+- **Area:** visualization, docs
+- **Context:** The first RGIS map pass could hide the legend behind the Leaflet
+  pane, clamp dragging to one world copy, and fit the full-U.S. view too
+  tightly when the loaded extent spanned the Pacific.
+- **Decision:** Keep the legend overlay in a higher stacking layer, remove the
+  hard world clamp from the Leaflet setup, force basemap repetition with
+  wrapping enabled, use a wider fit strategy for very large extents before
+  falling back to normal geometry bounds fitting, and place the legend in the
+  full-width footer area beneath the map instead of over the geometry.
+- **Why:** The public RGIS page should keep the legend readable, show the full
+  loaded geography by default, and allow users to pan naturally across wrapped
+  basemap copies.
+- **Validation:** `pnpm exec biome check src/components/site/rgis-leaflet-map.tsx`,
+  `pnpm build`, and browser verification on `http://localhost:3000/data/rgis`
+  confirming that the legend remains visible inside the map card.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`
+- **Follow-up:** If later datasets expose extents that cross the antimeridian in
+  a more complex way, keep the fit logic isolated in the RGIS map component
+  instead of spreading bounds heuristics across route code and content models.
+
 ## 2026-03-21 - Add multi-year `periodyear` selection to `/data/bberdb/`
 - **Status:** accepted
 - **Area:** architecture, cms, docs
@@ -610,3 +665,33 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 - **Validation:** `pnpm lint`, `pnpm build`, browser verification for `/about/services/research` confirming the bottom links stay on `localhost:3000`, plus repository search for remaining `https://bber.unm.edu` references.
 - **Docs updated:** `AGENTS.md`, `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`
 - **Follow-up:** Continue replacing remaining hardcoded `bber.unm.edu` references only when there is a confirmed local route or repo-owned asset to target, rather than guessing missing routes.
+
+## 2026-03-22 - Align BBER DB and RGIS default selector state to Gross Receipts
+- **Status:** accepted
+- **Area:** data, routing, docs
+- **Context:** The shared BBER data-bank controls were still opening on the old `S0801 : Commute Data` table, while the current desired default state for both `/data/bberdb/` and `/data/rgis/` is the economic `Gross Receipts` view shown in product review.
+- **Decision:** Make `v_rp80` (`Gross Receipts`) the shared default dataset and set its default filter bundle to `County`, `2025,2024`, `Monthly`, `Total` industry, and `Total` ownership.
+- **Why:** Both data-bank entry points should open on the same current economic view so users see the intended selectors and applied query immediately on first load.
+- **Validation:** `node --import tsx --test src/content-models/bberdb.test.ts src/content-models/rgis.test.ts src/lib/rgis.test.ts`, `pnpm exec biome check src/content-models/bberdb.ts src/content-models/bberdb.test.ts`, `pnpm build`
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/CMS_CONTRACT.md`
+- **Follow-up:** If product defaults change again, update the shared default table and query in `src/content-models/bberdb.ts` so `/data/bberdb/` and `/data/rgis/` stay aligned.
+
+## 2026-03-22 - Deduplicate RGIS year-frame features by geography
+- **Status:** accepted
+- **Area:** data, visualization, docs
+- **Context:** The default Gross Receipts RGIS view loads monthly county records for each selected year. The initial year-frame normalizer kept every monthly polygon, which stacked duplicate county shapes on the map and broke hover behavior.
+- **Decision:** Collapse each RGIS year frame to one feature per geography by preferring the newest `release` and then the highest `period` before sending the feature collection to Leaflet.
+- **Why:** The map needs one interactive polygon per geography. Keeping all monthly duplicates made county hover unreliable and inflated the rendered layer count from 33 counties to 363 overlapping shapes.
+- **Validation:** `node --import tsx --test src/content-models/rgis.test.ts`, `pnpm exec biome check src/content-models/rgis.ts src/content-models/rgis.test.ts`, `pnpm build`, Playwright verification on `/data/rgis` confirming the default county view now renders 33 interactive polygons instead of 363 stacked monthly copies.
+- **Docs updated:** `docs/AGENT_NOTES.md`, `docs/CMS_CONTRACT.md`
+- **Follow-up:** If the product later needs explicit within-year playback for monthly or quarterly RGIS data, add a visible period switcher rather than reintroducing duplicate geometries into one active map frame.
+
+## 2026-03-22 - Give RGIS hover state a geography fallback id
+- **Status:** accepted
+- **Area:** data, visualization, docs
+- **Context:** Some RGIS datasets, including the default Gross Receipts county map, do not include `geo_id` on each feature. The map layer and feature summaries were then falling back to the year alone, which caused every geography in that year to share one hover and pin identity.
+- **Decision:** Use a shared RGIS feature-id helper that falls back from `geo_id` or `geoid` to `stfips:areatype:area`, and reuse that helper in both the normalized feature summaries and the Leaflet layer.
+- **Why:** Hover and pin state must identify one geography at a time even when the upstream payload omits a dedicated GEOID column.
+- **Validation:** `node --import tsx --test src/content-models/rgis.test.ts`, `pnpm exec biome check src/content-models/rgis.ts src/content-models/rgis.test.ts src/components/site/rgis-leaflet-map.tsx`, `pnpm build`, Playwright verification on `/data/rgis` confirming 33 interactive county polygons and exactly one hovered path highlighted at a time.
+- **Docs updated:** `docs/AGENT_NOTES.md`, `docs/CMS_CONTRACT.md`
+- **Follow-up:** Keep the shared feature-id helper in sync with any future RGIS summary-key changes so the map and side panel never drift onto different geography identities.

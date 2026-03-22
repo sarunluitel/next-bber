@@ -25,6 +25,9 @@ The app currently includes:
 - a live BBER REST API CPI page at `/data/cpi`
 - a live BBER REST API data portal at `/data/bberdb/` with staged dataset and
   filter loading plus first-party query/download routes
+- a live BBER REST API RGIS map explorer at `/data/rgis/` with shared staged
+  selectors, Leaflet choropleth rendering, first-party map/download routes,
+  and multi-year year-frame switching
 - a first-party API documentation page at `/data/apidoc`
 - a live CMS-backed NM Data Users Conference section at `/data/nm-duc/` with
   automatically discoverable conference detail pages
@@ -77,6 +80,7 @@ Live CMS feeds currently come from:
 - `https://api.bber.unm.edu/api/data/rest/bbertable?table=qcew&...`
 - `https://api.bber.unm.edu/api/data/rest/bbertable?table=v_cpi&stfips=00&areatype=06&area=0000`
 - `https://api.bber.unm.edu/api/data/rest/cpitab?areatype=00`
+- `https://api.bber.unm.edu/api/data/rest/makemap?table=TABLE_NAME&...`
 - `https://api.bber.unm.edu/api/bber-data-pages/duc-index`
 - `https://api.bber.unm.edu/api/bber-data-pages?group=data-conferences`
 - `https://api.bber.unm.edu/api/bber-data-pages/{slug}`
@@ -124,6 +128,20 @@ The shared download stack now uses one API-endpoint modal across statewide
 cards, economic indicators, and BBER DB queries, with first-party
 `format=api` routes returning descriptor payloads for the reusable modal rather
 than opening the upstream endpoint immediately.
+
+The RGIS route at `/data/rgis/` extends that same shared data-bank stack
+instead of building a second metadata pipeline. It reuses the local dataset
+catalog, staged draft-versus-applied selector flow, and shared API endpoint
+modal, but swaps the applied data fetch to the live `makemap` GeoJSON
+endpoint. The loaded response is normalized once on the server and then drives
+both a Leaflet choropleth map and the right-hand metric panel. Multi-year
+queries stay comma-separated in the shared query model, the UI groups the
+loaded features into explicit year frames with an active-year switcher, and
+RGIS downloads now bundle `<table>.xml` metadata alongside GeoJSON and
+shapefile exports through `/api/rgis/*`. The Leaflet map keeps its legend above
+the map pane, uses a wide fit for world-spanning extents such as the full U.S.
+view, and allows horizontal world wrapping instead of clamping drag movement to
+one copy of the map.
 
 The location quotient, donut, and population pyramid visualizations now live as
 portable primitives inside the statewide dashboard instead of as standalone
@@ -215,9 +233,21 @@ Current deployment caveat:
   `/api/bberdb/filters`, `/api/bberdb/table`, and `/api/bberdb/download`
   routes so future runtime visualizations can reuse the same normalized query
   contract.
+- The shared BBER data-bank default selection for both `/data/bberdb/` and
+  `/data/rgis/` is now `Gross Receipts` (`v_rp80`) with `County`,
+  `2025, 2024`, `Monthly`, `Total` industry, and `Total` ownership so both
+  pages open on the same economic dataset and selector state.
 - The BBER DB year filter is a true multi-select, and outgoing `periodyear`
   values must stay comma-separated to match the supported API contract already
   documented on `/data/apidoc`.
+- The `/data/rgis/` route reuses that same shared query and metadata contract,
+  but loads `makemap` GeoJSON for Leaflet rendering, keeps hover and pinned
+  geography state client-side, and exposes `/api/rgis/filters`,
+  `/api/rgis/map`, and `/api/rgis/download` for first-party map and export
+  flows.
+- RGIS downloads must keep the XML metadata sidecar with the spatial data.
+  `GeoJSON + XML` and `Shapefile + XML` are delivered as zip archives built
+  from the same normalized payload used by the map UI.
 - The data portal intentionally fast-fails upstream metadata and table calls
   into inline error states so the page can still render and recover from
   temporary REST outages instead of failing the full route.

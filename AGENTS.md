@@ -90,6 +90,14 @@ Rules:
   contract because the public BBER REST API supports multiple years in one
   query. Keep the query normalization in `src/content-models/bberdb.ts` and
   reuse the shared dropdown primitives when adjusting that control.
+- For `/data/rgis/`, extend the shared BBER data-bank stack instead of
+  reimplementing dataset catalogs, filter parsing, or download UI. Keep shared
+  selector logic in `src/lib/bber-data-bank.ts`, keep RGIS map normalization
+  in `src/content-models/rgis.ts`, and reuse the shared API endpoint modal plus
+  download dropdown before adding any RGIS-specific affordance.
+- RGIS downloads are part of the public data contract. GeoJSON and shapefile
+  exports must bundle the matching `<table>.xml` metadata sidecar generated
+  from the normalized loaded payload rather than from ad hoc client state.
 
 ### 4) CMS content is an external contract
 The CMS is a producer of JSON. The frontend is a consumer. That boundary must be explicit.

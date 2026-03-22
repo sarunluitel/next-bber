@@ -73,6 +73,9 @@ JSX:
 - `src/content-models/bberdb.ts` contains the local 75-table BBER data-portal
   catalog, category labels, query helpers, sentinel mapping, and the
   normalized filter/table view-model contract for `/data/bberdb/`.
+- `src/content-models/rgis.ts` contains the RGIS page copy, basemap catalog,
+  GeoJSON normalization rules, year-frame grouping, metric pairing, and the
+  normalized map view-model contract for `/data/rgis/`.
 
 This keeps the UI code ready for a future CMS-backed pages feed without mixing
 layout concerns with the data source.
@@ -130,6 +133,18 @@ Live CMS feeds are fetched on the server only:
   timeouts into inline page states instead of route crashes. The same boundary
   now preserves comma-separated `periodyear` selections for multi-year queries
   instead of collapsing them back to one year.
+- `src/lib/bber-data-bank.ts` now owns the shared server-only metadata flow for
+  BBER DB and RGIS routes, including dataset validation, `tablevariables`
+  parsing, `tablevalues` requests, and the normalized filter model handoff.
+- `src/lib/rgis.ts` performs the server-only RGIS assembly for `/data/rgis/`,
+  calls the live `makemap` endpoint, normalizes the returned `FeatureCollection`
+  and metadata, and exposes first-party RGIS filter/map/download payloads.
+- `src/lib/rgis-downloads.ts` owns RGIS archive generation so GeoJSON and
+  shapefile exports can share the same normalized payload and XML sidecar
+  contract without weakening the server-only route adapter boundary.
+- `src/lib/rgis-xml.ts` builds the `<table>.xml` metadata sidecar from the
+  normalized RGIS payload using a repo-owned XML template in
+  `public/RGIS_XML/template.xml`.
 - `src/lib/location-quotient.ts` performs server-only fetches against QCEW
   table and metadata endpoints, requests both selected-ownership numerators and
   all-ownership denominators, and normalizes the joined result into frame-based
@@ -215,6 +230,10 @@ The staff and directors pages mirror the live BBER contract:
 - `/data/econindicators/` is a dynamic server-rendered dashboard route that
   recreates the live multi-chart indicators page from BBER REST sources while
   reusing one shared client line renderer across all cards.
+- `/data/rgis` is a dynamic server-rendered map explorer route that reuses the
+  shared BBER data-bank selectors, keeps draft filter changes separate from the
+  applied map until `Load`, and renders one active year frame at a time from
+  the already loaded `makemap` response.
 - `/api/bberdb/filters` is a first-party route handler that returns the
   normalized live filter model for one selected BBER DB table, including the
   live `tablevariables` payload shape where column names arrive under
@@ -227,6 +246,15 @@ The staff and directors pages mirror the live BBER contract:
 - `/api/bberdb/download` is a first-party route handler that serves API-link
   descriptor JSON plus JSON and CSV ZIP exports for BBER DB queries from the
   same normalization boundary used by the route UI.
+- `/api/rgis/filters` is a first-party route handler that returns the
+  normalized live RGIS filter model from the shared BBER data-bank metadata
+  boundary.
+- `/api/rgis/map` is a first-party route handler that returns the normalized
+  RGIS map payload, including year frames, metric options, feature summaries,
+  source metadata, and the upstream `makemap` API URL for the current query.
+- `/api/rgis/download` is a first-party route handler that serves API-link
+  descriptor JSON plus `GeoJSON + XML` and `Shapefile + XML` zip exports from
+  the same normalized payload used by the route UI.
 - `/api/chart-download/[chartId]` is a first-party route handler that serves
   API descriptor JSON plus JSON and CSV ZIP exports for compact statewide chart
   cards from the same server-normalized data boundary used for rendering.
@@ -312,6 +340,9 @@ Use client components only where interaction is required:
 - compact chart-card interactions such as variable menus, playback controls,
   hover state, and download menus for the statewide and economic-indicators
   dashboards
+- the BBER DB and RGIS staged selector controls, year multi-selects, API-link
+  modals, map hover or pinned state, and client-only Leaflet rendering for
+  `/data/rgis`
 - the collapsed past-employees disclosure on `/about/staff`
 
 Homepage, research landing, and publication result content all remain

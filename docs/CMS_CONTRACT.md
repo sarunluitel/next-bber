@@ -27,6 +27,7 @@ The frontend also consumes these BBER REST data endpoints:
 10. `GET https://api.bber.unm.edu/api/data/rest/metadata?api=tablevariables&table=TABLE_NAME`
 11. `GET https://api.bber.unm.edu/api/data/rest/metadata?api=tablevalues&table=TABLE_NAME&variables=[...]`
 12. `GET https://api.bber.unm.edu/api/data/rest/bbertable?table=TABLE_NAME&...`
+13. `GET https://api.bber.unm.edu/api/data/rest/makemap?table=TABLE_NAME&...`
 
 First-party download routes can also expose normalized API descriptor payloads
 that point at those upstream endpoints instead of redirecting immediately.
@@ -236,9 +237,13 @@ Normalization rules:
   `ownership`
 - `tablevalues` is fetched only for the visible filter keys of the currently
   selected table
-- defaults match the live public behavior: first `areatype`, latest numeric
-  `periodyear`, highest numeric `periodtype`, and first actual `indcode` or
-  `ownership` option when present
+- defaults match the shared public portal behavior: `/data/bberdb/` and
+  `/data/rgis/` open on `v_rp80` (`Gross Receipts`) with `areatype=04`
+  (`County`), `periodyear=2025,2024`, `periodtype=03` (`Monthly`),
+  `indcode=00` (`Total`), and `ownership=00` (`Total`); other tables still
+  fall back to the first `areatype`, latest numeric `periodyear`, highest
+  numeric `periodtype`, and first actual `indcode` or `ownership` option when
+  present
 - requested `periodyear` values may be a comma-separated year list, and the
   normalized query preserves only valid selected years in the published option
   order so one BBER DB query model can serve the page, downloads, and future
@@ -287,6 +292,55 @@ Normalization rules:
 - the route-level loading UI can show staged progress copy while the initial
   server render is still fetching metadata and the default table payload
 
+### `RgisMapViewModel`
+
+Used by `/data/rgis` and `GET /api/rgis/map`.
+
+- `datasetLabel: string`
+- `tableName: string`
+- `query: BberDbAppliedQuery`
+- `apiUrl: string`
+- `description: string`
+- `sourceLine: string`
+- `sourceMetadata: BberDbSourceMetadata`
+- `availableYears: string[]`
+- `activeYear: string`
+- `metricOptions: Array<{ key, label, marginKey, description, helperBreadcrumbs }>`
+- `defaultMetricKey: string | null`
+- `yearFrames: Array<{ year, featureCollection, featureSummaries }>`
+- `featureCount: number`
+
+Normalization rules:
+
+- RGIS reuses the same local 75-table dataset catalog and shared filter model
+  as `/data/bberdb`, including comma-separated multi-year `periodyear`
+  selections
+- the upstream `makemap` payload is fetched on the server only and normalized
+  as a `FeatureCollection` with one active year frame per loaded year
+- when a yearly frame contains multiple rows for the same geography, such as
+  monthly gross-receipts records, the normalizer keeps only the newest record
+  per geography by preferring the latest `release` and then the highest
+  `period` so the map renders one interactive polygon per place
+- RGIS hover and pin state must use a geography identity that falls back from
+  `geo_id` or `geoid` to `stfips:areatype:area` when upstream map rows do not
+  include a dedicated GEOID column
+- context fields such as `stfips`, `areatype`, `area`, `name`, `extent`,
+  `geo_id`, `periodyear`, `periodtype`, and `period` stay in feature summaries
+  and are not exposed as choropleth metric choices
+- estimate and margin-of-error columns are paired into one metric option so
+  the UI can show `estimate (±margin)` instead of separate margin rows
+- `column_description` values split on `!!` become audience-facing helper
+  breadcrumbs in the metric list when present
+- `availableYears` are sorted newest-first and multi-year loads render one
+  explicit active year at a time instead of blending repeated geographies into
+  one map
+- source lines and download payloads are derived from the same normalized map
+  payload so the map, API modal, GeoJSON export, and shapefile export stay in
+  sync
+- RGIS spatial downloads must bundle a matching `<table>.xml` sidecar built
+  from the normalized metadata, selected geography and period labels, loaded
+  years, and feature bounds
+
 ## Invariants
 
 - Homepage components must not parse raw CMS payloads.
@@ -316,3 +370,8 @@ Normalization rules:
 - publications archive normalization: `src/content-models/bber-research.ts`
 - BBER data-portal fetches: `src/lib/bberdb.ts`
 - BBER data-portal normalization: `src/content-models/bberdb.ts`
+- shared BBER data-bank metadata flow: `src/lib/bber-data-bank.ts`
+- RGIS map fetches: `src/lib/rgis.ts`
+- RGIS map normalization: `src/content-models/rgis.ts`
+- RGIS spatial export builders: `src/lib/rgis-downloads.ts`
+- RGIS XML metadata builder: `src/lib/rgis-xml.ts`

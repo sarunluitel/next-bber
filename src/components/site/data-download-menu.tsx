@@ -33,6 +33,10 @@ export function DataDownloadMenu({
   const [isApiDialogLoading, setIsApiDialogLoading] = useState(false);
 
   async function handleSelectFormat(format: DownloadFormat) {
+    if (format !== "api" && format !== "json" && format !== "csv") {
+      return;
+    }
+
     if (format === "json") {
       window.location.assign(jsonDownloadUrl);
       return;
