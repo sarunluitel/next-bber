@@ -5,6 +5,17 @@ import type {
   RawRecord,
 } from "@/lib/econindicators";
 
+export type ApiEndpointDescriptor = {
+  label: string;
+  apiUrl: string;
+};
+
+export type ApiEndpointPayload = {
+  title: string;
+  description: string;
+  endpoints: ApiEndpointDescriptor[];
+};
+
 function escapeCsvValue(value: unknown) {
   if (value === null || value === undefined) {
     return "";
@@ -102,6 +113,9 @@ export function buildChartCsvZipFileName(chartTitle: string) {
   return `${sanitizeDownloadFileName(chartTitle)}.zip`;
 }
 
+export const buildDownloadJsonFileName = buildChartJsonFileName;
+export const buildDownloadCsvZipFileName = buildChartCsvZipFileName;
+
 function appendChartDatasetToZip(args: {
   zip: JSZip;
   chartTitle: string;
@@ -196,6 +210,8 @@ export async function buildChartCsvZipBuffer({
   return zip.generateAsync({ type: "nodebuffer" });
 }
 
+export const buildDatasetCsvZipBuffer = buildChartCsvZipBuffer;
+
 export async function buildChartDatasetsCsvZipBuffer(args: {
   chartTitle: string;
   datasets: {
@@ -220,3 +236,5 @@ export async function buildChartDatasetsCsvZipBuffer(args: {
 
   return zip.generateAsync({ type: "nodebuffer" });
 }
+
+export const buildDatasetsCsvZipBuffer = buildChartDatasetsCsvZipBuffer;

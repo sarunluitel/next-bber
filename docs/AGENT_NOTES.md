@@ -16,6 +16,86 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 
 ---
 
+## 2026-03-21 - Add multi-year `periodyear` selection to `/data/bberdb/`
+- **Status:** accepted
+- **Area:** architecture, cms, docs
+- **Context:** The BBER DB page initially treated year as a single-select even
+  though the public API documentation and the upstream REST contract support
+  comma-separated `periodyear` selections.
+- **Decision:** Keep `periodyear` normalization in
+  `src/content-models/bberdb.ts`, accept comma-separated year lists as valid
+  draft and applied queries, serialize them back to the API without JSON
+  quoting, and render the BBER DB year control as a shared dropdown-based
+  multi-select instead of inventing a page-local picker.
+- **Why:** This aligns the route with the documented BBER API contract and
+  keeps future maps, charts, and dashboard drill-downs on the same reusable
+  query model.
+- **Validation:** `node --test src/content-models/bberdb.test.ts`, targeted
+  `pnpm exec biome check` on the changed files, and `pnpm build`.
+- **Docs updated:** `AGENTS.md`, `README.md`, `docs/AGENT_NOTES.md`,
+  `docs/ARCHITECTURE.md`, `docs/CMS_CONTRACT.md`
+- **Follow-up:** If future filter surfaces expose multi-select controls beyond
+  year, extend the shared query normalization layer rather than serializing
+  arrays ad hoc inside route handlers or client components.
+
+## 2026-03-21 - Tighten public-facing copy rules for data pages
+- **Status:** accepted
+- **Area:** docs, workflow
+- **Context:** A BBER DB page revision let implementation-oriented phrases leak
+  into visible HTML, even though the public site is aimed at researchers,
+  faculty, policymakers, and other professional audiences.
+- **Decision:** Reinforce the rule that rendered site copy must read as
+  publication-quality audience-facing content. Keep agent reasoning, future
+  feature notes, component-reuse rationale, and migration context in comments
+  or repository docs instead of public UI text.
+- **Why:** The site represents a university economics research department, so
+  visible copy must support trust, clarity, and professional credibility.
+- **Validation:** Manual review of the affected `/data/bberdb/` copy and
+  documentation updates in the agent guidance files.
+- **Docs updated:** `AGENTS.md`, `README.md`, `docs/AGENT_NOTES.md`,
+  `docs/VISUALIZATION_GUIDE.md`
+- **Follow-up:** When adding or revising page text, review it as if it were
+  publication copy first and implementation scaffolding second.
+
+## 2026-03-21 - Add the `/data/bberdb/` staged data portal
+- **Status:** accepted
+- **Area:** routing, architecture, cms, docs
+- **Context:** The Data navigation already exposed a `Data Portal` entry, but
+  the repo still lacked a first-party implementation of the live BBER database
+  page that stages dataset and filter changes before loading the table.
+- **Decision:** Add a dedicated `/data/bberdb/` route backed by a local
+  75-table catalog content model, a server-only BBER DB adapter that reads
+  `tablevariables`, `tablevalues`, and `bbertable`, and first-party
+  `/api/bberdb/filters`, `/api/bberdb/table`, and `/api/bberdb/download`
+  handlers. Keep `Data Category` local, keep draft filter state separate from
+  the applied table state until `Load`, reuse the shared download dropdown
+  pattern, accept the live `tablevariables` `{ columns: [...] }` payload
+  shape, keep the route dynamic with a 30-second upstream timeout budget, and
+  surface upstream failures such as `sf1p1` or timed-out default loads as
+  inline page states instead of crashing the route while letting the client
+  retry degraded initial loads automatically. Keep year filters newest-first,
+  sort rows newest-first, move geography/time/industry context columns ahead
+  of metrics, compact long multi-geography titles, and wrap trailing metric
+  qualifiers onto stacked header lines for wide tables. Override awkward system
+  labels such as `period -> Period`, and add a staged route loading screen so
+  slow initial renders read as active work instead of a stuck page. Reuse the
+  shared download menu plus API modal across statewide charts, economic
+  indicators, and BBER DB instead of inventing page-local download flows.
+- **Why:** This preserves the live control flow while keeping the query,
+  metadata, and download contracts modular enough to reuse in future maps,
+  charts, and dashboard drill-downs.
+- **Validation:** `node --test src/content-models/bberdb.test.ts`, targeted
+  `pnpm exec biome check` on the changed files, `pnpm build`, Playwright
+  verification on `http://localhost:3000/data/bberdb`, and local checks that
+  `sf1p1` stays selectable, keeps the loaded table stable, disables `Load`,
+  disables the broken draft in the download-source prompt, and that `v_rp80`
+  now exposes `Industry` plus `Ownership` filters from live metadata.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`,
+  `docs/ARCHITECTURE.md`, `docs/CMS_CONTRACT.md`
+- **Follow-up:** If the upstream service later slows down again, keep the page
+  dynamic and adjust the timeout or recovery strategy in `src/lib/bberdb.ts`
+  instead of caching degraded fallback HTML for the whole route.
+
 ## 2026-03-20 - Move primary navigation shaping to the server
 - **Status:** accepted
 - **Area:** performance, architecture, docs

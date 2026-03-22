@@ -25,6 +25,10 @@ explicit data validation, normalization, and formatting boundaries.
   faculty, policy audiences, and grant reviewers. Keep implementation notes,
   migration context, and agent reasoning in comments or docs, not in rendered
   HTML.
+- The same rule applies to tables, filter instructions, status banners, source
+  notes, and other non-chart UI on data pages. Public text should help a
+  research audience interpret the data, not describe internal implementation
+  details or future engineering plans.
 - If a chart offers downloads, treat those exports as part of the visualization
   contract. API links, JSON payloads, and CSV/ZIP generation should be driven
   from the same normalized server boundary as the chart data rather than from

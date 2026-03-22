@@ -1,33 +1,9 @@
 "use client";
 
-import {
-  CopyIcon,
-  DatabaseIcon,
-  DownloadIcon,
-  ExternalLinkIcon,
-  FileJsonIcon,
-  FileSpreadsheetIcon,
-  SearchIcon,
-} from "lucide-react";
+import { SearchIcon } from "lucide-react";
 import { useDeferredValue, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { DataDownloadMenu } from "@/components/site/data-download-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -327,7 +303,11 @@ function IndicatorCard({
               />
             ) : null}
 
-            <ChartDownloadMenu card={card} />
+            <DataDownloadMenu
+              apiRequestUrl={`/api/econindicators/${card.id}/download?format=api`}
+              jsonDownloadUrl={`/api/econindicators/${card.id}/download?format=json`}
+              csvDownloadUrl={`/api/econindicators/${card.id}/download?format=csv`}
+            />
           </div>
         </div>
 
@@ -414,94 +394,6 @@ function IndicatorCard({
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function ChartDownloadMenu({ card }: { card: EconIndicatorCard }) {
-  const [isApiDialogOpen, setIsApiDialogOpen] = useState(false);
-  const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
-  const jsonDownloadUrl = `/api/econindicators/${card.id}/download?format=json`;
-  const csvDownloadUrl = `/api/econindicators/${card.id}/download?format=csv`;
-
-  async function handleCopyApiLink() {
-    await navigator.clipboard.writeText(card.apiUrl);
-    setCopyStatus("copied");
-
-    window.setTimeout(() => {
-      setCopyStatus("idle");
-    }, 1500);
-  }
-
-  return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button variant="outline" size="sm" className="rounded-full" />
-          }
-        >
-          <DownloadIcon data-icon="inline-start" />
-          Download
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          className="w-56 rounded-xl border border-[var(--bber-border)] bg-white"
-        >
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>Data Download</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => setIsApiDialogOpen(true)}>
-              <DatabaseIcon />
-              API
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => window.location.assign(jsonDownloadUrl)}
-            >
-              <FileJsonIcon />
-              JSON Data
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => window.location.assign(csvDownloadUrl)}
-            >
-              <FileSpreadsheetIcon />
-              CSV Data (Excel)
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <Dialog open={isApiDialogOpen} onOpenChange={setIsApiDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>API Endpoint</DialogTitle>
-            <DialogDescription>
-              Use this endpoint in your own workflow to retrieve the source data
-              behind this chart.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="rounded-2xl border border-[var(--bber-border)] bg-[var(--bber-sand)]/35 p-4">
-            <code className="block overflow-x-auto whitespace-pre-wrap break-all text-sm leading-7 text-[var(--bber-ink)]">
-              {card.apiUrl}
-            </code>
-          </div>
-
-          <DialogFooter showCloseButton>
-            <Button variant="outline" onClick={handleCopyApiLink}>
-              <CopyIcon data-icon="inline-start" />
-              {copyStatus === "copied" ? "Copied" : "Copy Link"}
-            </Button>
-            <Button
-              onClick={() =>
-                window.open(card.apiUrl, "_blank", "noopener,noreferrer")
-              }
-            >
-              <ExternalLinkIcon data-icon="inline-start" />
-              Open Endpoint
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
   );
 }
 

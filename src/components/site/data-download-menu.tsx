@@ -1,82 +1,89 @@
 "use client";
 
+import { useState } from "react";
 import {
-  DatabaseIcon,
-  DownloadIcon,
-  FileJsonIcon,
-  FileSpreadsheetIcon,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+  ApiEndpointDialog,
+  readApiEndpointPayload,
+} from "@/components/site/api-endpoint-dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import type { NmStatewideChartId } from "@/content-models/nm-statewide-dashboard";
+  DataDownloadDropdown,
+  type DownloadFormat,
+} from "@/components/site/data-download-dropdown";
+import type { ApiEndpointPayload } from "@/lib/chart-downloads";
 
 type DataDownloadMenuProps = {
-  chartId: NmStatewideChartId;
+  apiRequestUrl: string;
+  jsonDownloadUrl: string;
+  csvDownloadUrl: string;
+  disabled?: boolean;
 };
 
-function buildDownloadHref(
-  chartId: NmStatewideChartId,
-  format: "api" | "json" | "csv",
-) {
-  return `/api/chart-download/${chartId}?format=${format}`;
-}
+export function DataDownloadMenu({
+  apiRequestUrl,
+  jsonDownloadUrl,
+  csvDownloadUrl,
+  disabled = false,
+}: DataDownloadMenuProps) {
+  const [apiDialogPayload, setApiDialogPayload] =
+    useState<ApiEndpointPayload | null>(null);
+  const [apiDialogErrorMessage, setApiDialogErrorMessage] = useState<
+    string | null
+  >(null);
+  const [isApiDialogOpen, setIsApiDialogOpen] = useState(false);
+  const [isApiDialogLoading, setIsApiDialogLoading] = useState(false);
 
-export function DataDownloadMenu({ chartId }: DataDownloadMenuProps) {
+  async function handleSelectFormat(format: DownloadFormat) {
+    if (format === "json") {
+      window.location.assign(jsonDownloadUrl);
+      return;
+    }
+
+    if (format === "csv") {
+      window.location.assign(csvDownloadUrl);
+      return;
+    }
+
+    setIsApiDialogOpen(true);
+    setIsApiDialogLoading(true);
+    setApiDialogErrorMessage(null);
+
+    try {
+      const payload = await readApiEndpointPayload(apiRequestUrl);
+      setApiDialogPayload(payload);
+    } catch (error) {
+      setApiDialogPayload(null);
+      setApiDialogErrorMessage(
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message
+          : "The API endpoint could not be loaded.",
+      );
+    } finally {
+      setIsApiDialogLoading(false);
+    }
+  }
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="border-[var(--bber-border)] bg-white text-[var(--bber-ink)]"
-          />
-        }
-      >
-        <DownloadIcon data-icon="inline-start" className="size-3.5" />
-        Download
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>Data Download</DropdownMenuLabel>
-          <DropdownMenuItem
-            onClick={() =>
-              window.open(
-                buildDownloadHref(chartId, "api"),
-                "_blank",
-                "noopener,noreferrer",
-              )
-            }
-          >
-            <DatabaseIcon />
-            API
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() =>
-              window.location.assign(buildDownloadHref(chartId, "json"))
-            }
-          >
-            <FileJsonIcon />
-            JSON Data
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() =>
-              window.location.assign(buildDownloadHref(chartId, "csv"))
-            }
-          >
-            <FileSpreadsheetIcon />
-            CSV Data (Excel)
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DataDownloadDropdown
+        disabled={disabled}
+        onSelectFormat={handleSelectFormat}
+      />
+
+      <ApiEndpointDialog
+        open={isApiDialogOpen}
+        onOpenChange={(nextOpen) => {
+          setIsApiDialogOpen(nextOpen);
+
+          if (!nextOpen) {
+            setApiDialogPayload(null);
+            setApiDialogErrorMessage(null);
+            setIsApiDialogLoading(false);
+          }
+        }}
+        payload={apiDialogPayload}
+        isLoading={isApiDialogLoading}
+        errorMessage={apiDialogErrorMessage}
+      />
+    </>
   );
 }

@@ -19,9 +19,8 @@ dependency.
 - The spec assumes the current single-app layout, enables Corepack, installs
   dependencies with `pnpm`, builds the app with `pnpm build`, publishes the
   `.next` output, and caches both `.pnpm-store` and `.next/cache`.
-- The app currently runs on Next.js `16.2.0-canary.94`, so Amplify deployment
-  remains a compatibility risk until AWS publishes SSR support beyond Next.js
-  `15` or the app is moved off the current canary line.
+- The app currently runs on Next.js `16.2.0`, so Amplify deployment remains a
+  compatibility risk until AWS publishes SSR support beyond Next.js `15`.
 
 ## Current architectural shape
 
@@ -71,6 +70,9 @@ JSX:
 - `src/content-models/nm-statewide-dashboard.ts` contains the compact
   six-card dashboard contract, per-card selector catalogs, download metadata,
   and shared source-line helpers for the statewide dashboard.
+- `src/content-models/bberdb.ts` contains the local 75-table BBER data-portal
+  catalog, category labels, query helpers, sentinel mapping, and the
+  normalized filter/table view-model contract for `/data/bberdb/`.
 
 This keeps the UI code ready for a future CMS-backed pages feed without mixing
 layout concerns with the data source.
@@ -121,6 +123,13 @@ Live CMS feeds are fetched on the server only:
 - `src/lib/cpi.ts` performs server-only fetches against the BBER REST `v_cpi`
   and `cpitab` endpoints, normalizes the monthly trend and annual table
   separately, and keeps partial or failed sections reviewable in the page UI.
+- `src/lib/bberdb.ts` performs the server-only BBER data-portal fetch flow for
+  `/data/bberdb/`, derives supported filter keys from `tablevariables`, reads
+  live filter options from `tablevalues`, normalizes loaded `bbertable`
+  results, exposes first-party download payloads, and fast-fails upstream
+  timeouts into inline page states instead of route crashes. The same boundary
+  now preserves comma-separated `periodyear` selections for multi-year queries
+  instead of collapsing them back to one year.
 - `src/lib/location-quotient.ts` performs server-only fetches against QCEW
   table and metadata endpoints, requests both selected-ownership numerators and
   all-ownership denominators, and normalizes the joined result into frame-based
@@ -178,6 +187,15 @@ The staff and directors pages mirror the live BBER contract:
   location quotient and United States population frames.
 - `/data/apidoc` is a local static documentation route for the public data API,
   with route-owned copy and examples instead of embedded backend tooling.
+- `/data/bberdb` is a server-rendered data-portal route that keeps the dataset
+  catalog local, derives visible filters from live metadata one table at a
+  time, keeps draft query state separate from the applied table until the user
+  clicks `Load`, opts out of route-level caching so transient upstream outages
+  do not freeze fallback HTML, and lets the client retry the initial
+  metadata-plus-table load when the first render degrades. Its `periodyear`
+  filter is a dropdown-based multi-select whose outgoing query value remains a
+  comma-separated string so the page, downloads, and future visualizations can
+  all share one BBER query contract.
 - `/data/colonias` is a local static section page for colonia methodology,
   downloads, and reference materials.
 - `/data/colonias/nm-colonia-maps` is a local static directory page for
@@ -197,9 +215,25 @@ The staff and directors pages mirror the live BBER contract:
 - `/data/econindicators/` is a dynamic server-rendered dashboard route that
   recreates the live multi-chart indicators page from BBER REST sources while
   reusing one shared client line renderer across all cards.
+- `/api/bberdb/filters` is a first-party route handler that returns the
+  normalized live filter model for one selected BBER DB table, including the
+  live `tablevariables` payload shape where column names arrive under
+  `columns[]`.
+- `/api/bberdb/table` is a first-party route handler that returns the currently
+  applied BBER DB table payload with display-name headers, leading
+  geography/time/industry context columns, newest-first row ordering, compact
+  multi-geography titles, system-label overrides such as `Period`, and source
+  metadata.
+- `/api/bberdb/download` is a first-party route handler that serves API-link
+  descriptor JSON plus JSON and CSV ZIP exports for BBER DB queries from the
+  same normalization boundary used by the route UI.
 - `/api/chart-download/[chartId]` is a first-party route handler that serves
-  API-link redirects plus JSON and CSV ZIP exports for compact statewide chart
+  API descriptor JSON plus JSON and CSV ZIP exports for compact statewide chart
   cards from the same server-normalized data boundary used for rendering.
+- `src/components/site/data-download-menu.tsx` owns the shared client download
+  flow for charts and tables, while
+  `src/components/site/api-endpoint-dialog.tsx` owns the reusable modal that
+  displays copyable API endpoints instead of navigating away immediately.
 - `/search` is a local placeholder route used by the shared search UI shell.
 - `app/[...slug]/page.tsx` resolves known URLs from `pages.ts` and renders
   placeholder pages for the current navigation structure.

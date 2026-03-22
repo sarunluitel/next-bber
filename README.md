@@ -23,6 +23,8 @@ The app currently includes:
 - a live BBER REST API statewide dashboard at `/data/nm-statewide/`
 - a live BBER REST API economic indicators dashboard at `/data/econindicators/`
 - a live BBER REST API CPI page at `/data/cpi`
+- a live BBER REST API data portal at `/data/bberdb/` with staged dataset and
+  filter loading plus first-party query/download routes
 - a first-party API documentation page at `/data/apidoc`
 - a live CMS-backed NM Data Users Conference section at `/data/nm-duc/` with
   automatically discoverable conference detail pages
@@ -69,7 +71,9 @@ Live CMS feeds currently come from:
 - `https://api.bber.unm.edu/api/bber-research/publications/indexes`
 - `https://api.bber.unm.edu/api/bber-research/publications?year=YYYY&category=ID&community=ID&limit=100`
 - `https://api.bber.unm.edu/api/data/rest/metadata?api=tablevalues&table=s0801&variables=[...]`
+- `https://api.bber.unm.edu/api/data/rest/metadata?api=tablevariables&table=TABLE_NAME`
 - `https://api.bber.unm.edu/api/data/rest/bbertable?table=s0801&...`
+- `https://api.bber.unm.edu/api/data/rest/bbertable?table=TABLE_NAME&...`
 - `https://api.bber.unm.edu/api/data/rest/bbertable?table=qcew&...`
 - `https://api.bber.unm.edu/api/data/rest/bbertable?table=v_cpi&stfips=00&areatype=06&area=0000`
 - `https://api.bber.unm.edu/api/data/rest/cpitab?areatype=00`
@@ -99,6 +103,27 @@ download actions for API links, direct JSON, and CSV ZIP exports.
 The CPI page reuses that same Observable Plot line renderer for the published
 monthly CPI-U series while keeping the annual table and source metadata in a
 separate server-normalized route model.
+
+The BBER data portal at `/data/bberdb/` keeps the 75-table dataset catalog and
+category labels local, derives visible filter controls from live
+`tablevariables` and `tablevalues` metadata per table, and holds draft filter
+changes separate from the currently loaded table until the user clicks `Load`.
+The page exposes first-party filter, table, and download routes under
+`/api/bberdb/*` so the same normalization boundary can later feed maps, charts,
+and dashboards without re-parsing raw REST responses inside client components.
+When the upstream API times out or rejects a table such as `sf1p1`, the page
+now renders an inline upstream-unavailable state instead of crashing the route.
+The loaded table keeps year options and row ordering newest-first, exposes
+`periodyear` as a comma-separated multi-select that follows the public BBER API
+contract, promotes geography/time/industry context columns ahead of metrics,
+compacts long multi-geography titles, and wraps trailing qualifiers such as
+`(Percent Allocated)` onto stacked header lines in the table UI. The route also
+ships with a staged loading screen that cycles through table/filter status
+messages while the initial server render is assembling the page.
+The shared download stack now uses one API-endpoint modal across statewide
+cards, economic indicators, and BBER DB queries, with first-party
+`format=api` routes returning descriptor payloads for the reusable modal rather
+than opening the upstream endpoint immediately.
 
 The location quotient, donut, and population pyramid visualizations now live as
 portable primitives inside the statewide dashboard instead of as standalone
@@ -140,11 +165,10 @@ local pnpm store and Next.js build cache between deploys.
 
 Current deployment caveat:
 
-- The repo is pinned to Next.js `16.2.0-canary.94`, while AWS Amplify's
-  published SSR support currently documents Next.js `12` through `15`. The
-  included build spec is the closest supported shape for this app, but the
-  hosting runtime may still need a future Amplify update or a move off Next 16
-  canary before production deployment is reliable.
+- The repo currently uses Next.js `16.2.0`, while AWS Amplify's published SSR
+  support still documents versions `12` through `15`. The included build spec
+  is the closest supported shape for this app, but the hosting runtime may
+  still need a future Amplify update before production deployment is reliable.
 
 ## Notes
 
@@ -186,9 +210,28 @@ Current deployment caveat:
 - The CPI page reads the live `v_cpi` and `cpitab` endpoints on the server,
   renders the monthly CPI-U trend through the shared line graph component, and
   keeps the annual table tied to the same live data boundary.
+- The `/data/bberdb/` portal keeps the dataset catalog local, derives filter
+  controls from live metadata per table, and exposes first-party
+  `/api/bberdb/filters`, `/api/bberdb/table`, and `/api/bberdb/download`
+  routes so future runtime visualizations can reuse the same normalized query
+  contract.
+- The BBER DB year filter is a true multi-select, and outgoing `periodyear`
+  values must stay comma-separated to match the supported API contract already
+  documented on `/data/apidoc`.
+- The data portal intentionally fast-fails upstream metadata and table calls
+  into inline error states so the page can still render and recover from
+  temporary REST outages instead of failing the full route.
+- The `/data/bberdb/` page itself now renders dynamically with a client-side
+  recovery pass after degraded first loads, and the upstream adapter accepts
+  the live `tablevariables` `{ columns: [...] }` payload shape before deriving
+  visible filters.
 - The API documentation page keeps the endpoint and parameter guidance local to
   this repo so the site can present supported API capabilities without
   exposing unfinished backend features in the public UI.
+- Any visible site copy should read as finished audience-facing content for
+  researchers, faculty, policymakers, students, and public-sector partners.
+  Implementation notes, future-facing engineering rationale, and agent process
+  language belong in comments or docs, not in rendered HTML.
 - The NM Data Users Conference section mirrors the live `duc-index` and
   `group=data-conferences` API contract, and detail pages must stay data-driven
   so new conference records can render automatically when the upstream content

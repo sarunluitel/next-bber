@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NmStatewideChartId } from "@/content-models/nm-statewide-dashboard";
 import {
+  type ApiEndpointPayload,
   buildChartCsvZipFileName,
   buildChartDatasetsCsvZipBuffer,
   buildChartJsonFileName,
@@ -27,18 +28,15 @@ export async function GET(
   const format = requestUrl.searchParams.get("format");
 
   if (format === "api") {
-    if (payload.datasets.length === 1) {
-      return NextResponse.redirect(payload.datasets[0].apiUrl);
-    }
-
     return NextResponse.json({
-      chartId: payload.chartId,
-      chartTitle: payload.chartTitle,
-      datasets: payload.datasets.map((dataset) => ({
+      title: payload.chartTitle,
+      description:
+        "Use these endpoints in your own workflow to retrieve the source data behind this chart.",
+      endpoints: payload.datasets.map((dataset) => ({
         label: dataset.label,
         apiUrl: dataset.apiUrl,
       })),
-    });
+    } satisfies ApiEndpointPayload);
   }
 
   if (format === "json") {

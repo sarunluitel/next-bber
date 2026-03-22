@@ -69,10 +69,27 @@ Rules:
   audience, not for internal implementation discussion. Do not expose phrases
   like "prototype", "recreation", "inside the app", "LLM", "agent", or other
   process language in page copy unless a human explicitly asks for it.
+- Treat rendered HTML copy as publication-quality content for a university
+  economics research audience: policymakers, faculty, researchers, students,
+  and community partners. Never surface internal architecture, future feature
+  plans, migration notes, component reuse rationale, placeholder language, or
+  agent thought process in visible page text.
 - Shared visualization infrastructure, including renderers, formatters,
   download helpers, and chart contracts, must use chart-agnostic naming.
   Keep page-specific or dataset-specific language in chart configuration,
   content models, and route wiring rather than in reusable chart utilities.
+- Reuse the shared download UI before creating new download affordances.
+  `src/components/site/data-download-menu.tsx` owns the standard API/JSON/CSV
+  menu behavior, `src/components/site/api-endpoint-dialog.tsx` owns the shared
+  API endpoint modal, and `src/components/site/data-download-dropdown.tsx`
+  owns the dropdown trigger. Page-specific wrappers such as
+  `src/components/site/bberdb-download-menu.tsx` should stay thin and only add
+  behavior the shared menu does not already cover, such as BBER DB's
+  loaded-versus-draft source prompt.
+- For `/data/bberdb/`, treat `periodyear` as a comma-separated multi-select
+  contract because the public BBER REST API supports multiple years in one
+  query. Keep the query normalization in `src/content-models/bberdb.ts` and
+  reuse the shared dropdown primitives when adjusting that control.
 
 ### 4) CMS content is an external contract
 The CMS is a producer of JSON. The frontend is a consumer. That boundary must be explicit.

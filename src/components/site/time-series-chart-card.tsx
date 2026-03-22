@@ -37,7 +37,11 @@ export function TimeSeriesChartCard({ card }: TimeSeriesChartCardProps) {
             }))}
             onValueChange={setSelectedMetricValue}
           />
-          <DataDownloadMenu chartId={card.download.chartId} />
+          <DataDownloadMenu
+            apiRequestUrl={`/api/chart-download/${card.download.chartId}?format=api`}
+            jsonDownloadUrl={`/api/chart-download/${card.download.chartId}?format=json`}
+            csvDownloadUrl={`/api/chart-download/${card.download.chartId}?format=csv`}
+          />
         </div>
       }
     >

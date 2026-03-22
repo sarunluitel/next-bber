@@ -22,6 +22,15 @@ The frontend currently consumes these BBER CMS endpoints:
 8. `GET https://api.bber.unm.edu/api/bber-research/publications/indexes`
 9. `GET https://api.bber.unm.edu/api/bber-research/publications?year=YYYY&category=ID&community=ID&limit=100`
 
+The frontend also consumes these BBER REST data endpoints:
+
+10. `GET https://api.bber.unm.edu/api/data/rest/metadata?api=tablevariables&table=TABLE_NAME`
+11. `GET https://api.bber.unm.edu/api/data/rest/metadata?api=tablevalues&table=TABLE_NAME&variables=[...]`
+12. `GET https://api.bber.unm.edu/api/data/rest/bbertable?table=TABLE_NAME&...`
+
+First-party download routes can also expose normalized API descriptor payloads
+that point at those upstream endpoints instead of redirecting immediately.
+
 ## Required pipeline
 
 1. fetch raw payload on the server
@@ -205,6 +214,79 @@ Normalization rules:
 - community option values come from `id`, labels from `community`
 - invalid option entries are dropped
 
+### `BberDbFilterModel`
+
+Used by `/data/bberdb` and `GET /api/bberdb/filters`.
+
+- `tableName: string`
+- `supportedFilterKeys: BberDbFilterKey[]`
+- `visibleFilterKeys: BberDbVisibleFilterKey[]`
+- `filters: Array<{ key, label, value, options }>`
+- `draftQuery: BberDbAppliedQuery`
+
+Normalization rules:
+
+- the 75-table dataset catalog and `Data Category` labels stay local to the
+  repo
+- `supportedFilterKeys` are derived by intersecting `tablevariables` with the
+  shared app-owned filter-key union, whether the upstream metadata arrives as a
+  raw array or a `{ columns: [...] }` object
+- only the current live filter surface is exposed in `visibleFilterKeys`:
+  `areatype`, `periodyear`, `periodtype`, plus conditional `indcode` and
+  `ownership`
+- `tablevalues` is fetched only for the visible filter keys of the currently
+  selected table
+- defaults match the live public behavior: first `areatype`, latest numeric
+  `periodyear`, highest numeric `periodtype`, and first actual `indcode` or
+  `ownership` option when present
+- requested `periodyear` values may be a comma-separated year list, and the
+  normalized query preserves only valid selected years in the published option
+  order so one BBER DB query model can serve the page, downloads, and future
+  visualizations
+- the page route remains dynamic and the client retries the default query when
+  the initial server render degrades because of a transient upstream failure
+
+### `BberDbTableViewModel`
+
+Used by `/data/bberdb` and `GET /api/bberdb/table`.
+
+- `datasetLabel: string`
+- `tableName: string`
+- `query: BberDbAppliedQuery`
+- `resultTitle: string`
+- `sourceLine: string`
+- `apiUrl: string`
+- `description: string`
+- `columns: Array<{ key, header, description }>`
+- `rows: Array<{ id, cells }>`
+- `rawRowCount: number`
+- `sourceMetadata: BberDbSourceMetadata`
+
+Normalization rules:
+
+- the upstream `bbertable` response is fetched on the server only
+- context columns such as geography, year, period, industry, and ownership are
+  promoted ahead of metric columns when the upstream row shape includes them
+- headers come from `metadata.columns[].display_name`, while column order
+  follows the published metadata order with any unreported row keys appended
+- known awkward system labels can be overridden in the normalized model, for
+  example `period -> Period`
+- trailing metric qualifiers such as `(Percent Allocated)` stay in the header
+  string, but the table UI may render them on stacked lines to reduce width
+- negative sentinel values `-1` through `-8` are mapped through the legacy
+  `dataExceptions` labels, including `-8 => Not applicable`
+- `resultTitle` is derived from unique `geographyname` values in the current
+  row set and compacts long geography lists after the first label
+- `sourceLine` is derived from the upstream table source and the applied year
+  or year selection
+- rows are sorted newest-first by `periodyear`, then `period`, before the
+  rendered table model is returned
+- when the upstream BBER REST service times out or rejects a selected table,
+  the first-party page keeps rendering and exposes the failure as an inline
+  upstream-unavailable state rather than crashing the route
+- the route-level loading UI can show staged progress copy while the initial
+  server render is still fetching metadata and the default table payload
+
 ## Invariants
 
 - Homepage components must not parse raw CMS payloads.
@@ -232,3 +314,5 @@ Normalization rules:
 - about people normalization: `src/content-models/bber-about-people.ts`
 - publications archive fetches: `src/lib/cms/bber-research.ts`
 - publications archive normalization: `src/content-models/bber-research.ts`
+- BBER data-portal fetches: `src/lib/bberdb.ts`
+- BBER data-portal normalization: `src/content-models/bberdb.ts`

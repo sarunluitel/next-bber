@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getEconIndicatorCardConfig } from "@/content-models/econindicators";
 import {
+  type ApiEndpointPayload,
   buildChartCsvZipBuffer,
   buildChartCsvZipFileName,
   buildChartJsonFileName,
@@ -24,6 +25,20 @@ export async function GET(
   const requestUrl = new URL(request.url);
   const format = requestUrl.searchParams.get("format");
   const dataset = await fetchIndicatorDataset(cardConfig);
+
+  if (format === "api") {
+    return NextResponse.json({
+      title: `${cardConfig.title} API Endpoint`,
+      description:
+        "Use this endpoint in your own workflow to retrieve the source data behind this chart.",
+      endpoints: [
+        {
+          label: cardConfig.title,
+          apiUrl: dataset.apiUrl,
+        },
+      ],
+    } satisfies ApiEndpointPayload);
+  }
 
   if (format === "json") {
     return new NextResponse(

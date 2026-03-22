@@ -19,7 +19,11 @@ export function EducationDonutChartCard({
       sourceLine={card.sourceLine}
       actions={
         <div className="flex w-full items-center justify-end">
-          <DataDownloadMenu chartId={card.download.chartId} />
+          <DataDownloadMenu
+            apiRequestUrl={`/api/chart-download/${card.download.chartId}?format=api`}
+            jsonDownloadUrl={`/api/chart-download/${card.download.chartId}?format=json`}
+            csvDownloadUrl={`/api/chart-download/${card.download.chartId}?format=csv`}
+          />
         </div>
       }
     >
