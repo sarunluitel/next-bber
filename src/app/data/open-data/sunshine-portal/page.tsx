@@ -1,5 +1,6 @@
-import { NotYetImplemented } from "@/components/site/not-yet-built";
+import { StaticResourcePageView } from "@/components/site/static-resource-page-view";
+import { OPEN_DATA_SUNSHINE_PORTAL_PAGE } from "@/content-models/data-static-pages";
 
 export default function OpenDataSunshinePortalPage() {
-  return <NotYetImplemented pathname="/data/open-data/sunshine-portal" />;
+  return <StaticResourcePageView page={OPEN_DATA_SUNSHINE_PORTAL_PAGE} />;
 }

@@ -29,10 +29,14 @@ The app currently includes:
   selectors, Leaflet choropleth rendering, first-party map/download routes,
   and multi-year year-frame switching
 - a first-party API documentation page at `/data/apidoc`
+- a local Open Data subsection at `/data/open-data/` with four local child
+  resource pages for UNM, Albuquerque, the Sunshine Portal, and Data.gov
 - a live CMS-backed NM Data Users Conference section at `/data/nm-duc/` with
   automatically discoverable conference detail pages
 - a Colonias section at `/data/colonias/` with a local methodology page and a
   county-grouped colonia maps directory
+- a local NM Statewide Gross Receipts reference page at
+  `/data/nm-statewide/gross-receipts/`
 - live server-side CMS feeds for homepage news and publications
 - a local `pages.ts` site tree used for navigation and section sidebars
 - a shared data-driven section sidebar for nested pages under Data, Research,
@@ -51,6 +55,7 @@ Stable site structure and homepage chrome content live locally:
 - `src/content-models/research-content.ts`
 - `src/content-models/about-content.ts`
 - `src/content-models/colonias-content.ts`
+- `src/content-models/data-static-pages.ts`
 - `src/content-models/subscribers-content.ts`
 - `src/content-models/bber-about-people.ts`
 
@@ -158,6 +163,11 @@ conference pages can appear without hardcoded route edits.
 The Colonias section is implemented as local structured content after live-site
 inspection showed editorial copy and file links rather than a separate
 `api.bber.unm.edu` content feed for the page itself.
+
+The Open Data subsection and the NM Statewide Gross Receipts page are also now
+implemented as local structured-content pages. They reuse a shared static
+resource renderer so link-heavy pages can stay server-rendered, audience-facing,
+and free of live BBER API dependencies when the live site is purely editorial.
 
 ## Development
 

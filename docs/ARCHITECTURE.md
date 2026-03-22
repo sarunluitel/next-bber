@@ -56,6 +56,10 @@ JSX:
   content, including services, history, helpful links, and contact content.
 - `src/content-models/colonias-content.ts` contains the Colonias methodology
   page content plus the county-grouped colonia map directory.
+- `src/content-models/data-static-pages.ts` contains the local structured
+  content for the Open Data subsection and the NM Statewide Gross Receipts
+  reference page, using one reusable static-resource page contract for
+  narrative sections, link groups, and local CTAs.
 - `src/content-models/cpi.ts` contains the normalized CPI route model for the
   trend chart, annual table, source metadata, and supporting public copy.
 - `src/content-models/location-quotient.ts` contains the QCEW request
@@ -205,6 +209,10 @@ The staff and directors pages mirror the live BBER contract:
   location quotient and United States population frames.
 - `/data/apidoc` is a local static documentation route for the public data API,
   with route-owned copy and examples instead of embedded backend tooling.
+- `/data/open-data` and its child routes under `/data/open-data/*` are local
+  static resource pages backed by a shared content model and renderer because
+  the live site exposes editorial copy and outbound links rather than API-fed
+  runtime data.
 - `/data/bberdb` is a server-rendered data-portal route that keeps the dataset
   catalog local, derives visible filters from live metadata one table at a
   time, keeps draft query state separate from the applied table until the user
@@ -230,6 +238,10 @@ The staff and directors pages mirror the live BBER contract:
 - `/data/nm-statewide` is a dynamic server-rendered dashboard route that
   recreates the live statewide data page with six compact chart cards, shared
   download actions, and portable client primitives for selectors and playback.
+- `/data/nm-statewide/gross-receipts` is a local static reference page within
+  the NM Statewide section. It intentionally stays separate from the live
+  dashboard stack because the public page is explanatory copy plus local calls
+  to the Data Portal and contact page, not a runtime visualization.
 - `/data/econindicators/` is a dynamic server-rendered dashboard route that
   recreates the live multi-chart indicators page from BBER REST sources while
   reusing one shared client line renderer across all cards.
@@ -269,6 +281,10 @@ The staff and directors pages mirror the live BBER contract:
   flow for charts and tables, while
   `src/components/site/api-endpoint-dialog.tsx` owns the reusable modal that
   displays copyable API endpoints instead of navigating away immediately.
+- `src/components/site/static-resource-page-view.tsx` owns the reusable shell
+  for local link-and-narrative pages that do not need runtime data fetches but
+  should still share the section shell, content cards, and internal-vs-external
+  link handling.
 - `/search` is a local unfinished route used by the shared search UI shell.
 - Unknown paths use `notFound()` and fall through to `app/not-found.tsx`.
 

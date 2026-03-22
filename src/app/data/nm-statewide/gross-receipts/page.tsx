@@ -1,5 +1,6 @@
-import { NotYetImplemented } from "@/components/site/not-yet-built";
+import { StaticResourcePageView } from "@/components/site/static-resource-page-view";
+import { NM_STATEWIDE_GROSS_RECEIPTS_PAGE } from "@/content-models/data-static-pages";
 
 export default function NmStatewideGrossReceiptsPage() {
-  return <NotYetImplemented pathname="/data/nm-statewide/gross-receipts" />;
+  return <StaticResourcePageView page={NM_STATEWIDE_GROSS_RECEIPTS_PAGE} />;
 }

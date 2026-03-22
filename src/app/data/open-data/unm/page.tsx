@@ -1,5 +1,6 @@
-import { NotYetImplemented } from "@/components/site/not-yet-built";
+import { StaticResourcePageView } from "@/components/site/static-resource-page-view";
+import { OPEN_DATA_UNM_PAGE } from "@/content-models/data-static-pages";
 
 export default function OpenDataUnmPage() {
-  return <NotYetImplemented pathname="/data/open-data/unm" />;
+  return <StaticResourcePageView page={OPEN_DATA_UNM_PAGE} />;
 }
