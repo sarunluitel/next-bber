@@ -695,3 +695,13 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 - **Validation:** `node --import tsx --test src/content-models/rgis.test.ts`, `pnpm exec biome check src/content-models/rgis.ts src/content-models/rgis.test.ts src/components/site/rgis-leaflet-map.tsx`, `pnpm build`, Playwright verification on `/data/rgis` confirming 33 interactive county polygons and exactly one hovered path highlighted at a time.
 - **Docs updated:** `docs/AGENT_NOTES.md`, `docs/CMS_CONTRACT.md`
 - **Follow-up:** Keep the shared feature-id helper in sync with any future RGIS summary-key changes so the map and side panel never drift onto different geography identities.
+
+## 2026-03-22 - Clean Amplify Next build output before packaging artifacts
+- **Status:** accepted
+- **Area:** deployment, docs
+- **Context:** The Amplify-hosted site was still serving old prerendered “Under Construction” versions of `/data/bberdb` and `/data/rgis` even though the current build output marks both routes as dynamic. That kind of mismatch can happen when stale `.next` contents survive between builds and get repackaged.
+- **Decision:** Update `amplify.yml` to remove `.next` before `pnpm build` so each Amplify deployment packages a fresh Next build output instead of mixing old route artifacts into the new deployment.
+- **Why:** The app recently changed route behavior from prerendered placeholder pages to live dynamic data routes, which is exactly the kind of transition where stale `.next` artifacts are risky.
+- **Validation:** Config change only. Deployment still needs a fresh Amplify rebuild to confirm the hosted origin picks up the new artifact set.
+- **Docs updated:** `docs/AGENT_NOTES.md`
+- **Follow-up:** Amplify’s managed SSR support currently documents Next.js support through version 15. If the refreshed deployment still serves stale or incorrect output on Next 16, verify the Amplify app is deploying the intended commit and consider either downgrading to a supported Next line or moving this app to a host with first-class Next 16 support.
