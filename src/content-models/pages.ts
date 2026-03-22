@@ -447,11 +447,3 @@ export function getSectionSidebarModel(
     sectionTitle: sidebarSourcePage.title,
   };
 }
-
-export function getStaticPageSlugs() {
-  return flattenPages(Pages)
-    .filter(({ node }) => normalizePageUrl(node.url) !== "/")
-    .map(({ node }) => {
-      return normalizePageUrl(node.url).split("/").filter(Boolean);
-    });
-}

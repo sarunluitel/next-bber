@@ -1,2 +1,0 @@
-check all the publications  and presentation numbers on strapi
-create 1 page demo for mrcog and center for women. show it on their site with new domain. 

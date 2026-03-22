@@ -705,3 +705,23 @@ This file is the decision and audit ledger for architectural, dependency, workfl
 - **Validation:** Config change only. Deployment still needs a fresh Amplify rebuild to confirm the hosted origin picks up the new artifact set.
 - **Docs updated:** `docs/AGENT_NOTES.md`
 - **Follow-up:** Amplify’s managed SSR support currently documents Next.js support through version 15. If the refreshed deployment still serves stale or incorrect output on Next 16, verify the Amplify app is deploying the intended commit and consider either downgrading to a supported Next line or moving this app to a host with first-class Next 16 support.
+
+## 2026-03-22 - Stop the placeholder catch-all from claiming implemented app routes
+- **Status:** accepted
+- **Area:** routing, docs
+- **Context:** `/data/rgis` and `/data/bberdb` worked in `pnpm dev` but fell back to the placeholder “Under Construction” pages in `pnpm build && pnpm start`. The root cause was the catch-all placeholder route generating static params for URLs that already have dedicated app routes.
+- **Decision:** Exclude implemented app-route pathnames from `getStaticPageSlugs()` in `src/content-models/pages.ts` so the catch-all placeholder route only prerenders truly placeholder-managed pages.
+- **Why:** Dev mode prefers the concrete route, but production prerendering let the catch-all statically claim the same URL. Removing those URLs from the catch-all slug list makes build/start behavior match dev.
+- **Validation:** `pnpm exec biome check src/content-models/pages.ts`, `pnpm build`, `pnpm start --port 3001`, and `curl` verification showing `/data/rgis` and `/data/bberdb` return the real route HTML/loading shell instead of the placeholder copy.
+- **Docs updated:** `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`
+- **Follow-up:** Superseded later on 2026-03-22 when the generic placeholder catch-all route was removed entirely.
+
+## 2026-03-22 - Replace the generic placeholder catch-all with explicit unfinished routes
+- **Status:** accepted
+- **Area:** routing, docs
+- **Context:** The generic `src/app/[...slug]/page.tsx` route hid route ownership behind a second slug-generation system, made production behavior harder to reason about, and required defensive filtering once concrete routes like `/data/rgis` and `/data/bberdb` were added.
+- **Decision:** Remove `src/app/[...slug]/page.tsx`, delete `getStaticPageSlugs()` and its supporting exclusion list from `src/content-models/pages.ts`, add the shared `src/components/site/not-yet-built.tsx` component, and create explicit `page.tsx` files for the unfinished routes that still appear in the `Pages` navigation tree.
+- **Why:** The `Pages` object should stay the site-navigation universe, but real route ownership should live in the App Router filesystem. Explicit unfinished routes are simpler to review, eliminate the hidden prerender path, and make it obvious which URLs still need real implementations.
+- **Validation:** `pnpm exec biome check src/components/site/not-yet-built.tsx src/app/search/page.tsx src/app/data/counties/page.tsx src/app/data/places/page.tsx src/app/data/tribal-areas/page.tsx src/app/data/open-data/page.tsx src/app/data/open-data/unm/page.tsx src/app/data/open-data/city-of-albuquerque/page.tsx src/app/data/open-data/sunshine-portal/page.tsx src/app/data/open-data/federal/page.tsx src/app/data/nm-statewide/industry-profiles/page.tsx src/app/data/nm-statewide/gross-receipts/page.tsx src/app/data/nm-statewide/census-tables/page.tsx src/app/data/nm-statewide/geographic-reference-maps/page.tsx src/app/data/nm-statewide/energy/page.tsx src/app/research/presentations/page.tsx src/app/research/projects/page.tsx src/content-models/pages.ts`, `pnpm build`, `pnpm start --port 3010`, and `curl` verification for `/data/counties` and `/data/rgis`.
+- **Docs updated:** `README.md`, `docs/AGENT_NOTES.md`, `docs/ARCHITECTURE.md`
+- **Follow-up:** When an unfinished route is implemented later, replace that route file’s `NotYetImplemented` export in place rather than reintroducing a generic placeholder catch-all.

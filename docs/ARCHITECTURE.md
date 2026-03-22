@@ -30,7 +30,7 @@ dependency.
 - `src/components/site/site-header.tsx` is mostly server-rendered and hands only
   the interactive navigation layer to a client component.
 - `src/components/site/site-footer.tsx` is shared across the homepage,
-  placeholder routes, search, and not-found states.
+  unfinished-page routes, search, and not-found states.
 - `src/components/site/interactive-primary-nav.tsx` uses a website-style split
   navigation pattern so parent IA nodes remain clickable pages instead of being
   trapped behind menu triggers.
@@ -41,8 +41,8 @@ Stable, low-churn site content is modeled locally instead of being embedded in
 JSX:
 
 - `src/content-models/pages.ts` contains the site tree, helper functions for
-  route resolution, and the navigation contract used by the header,
-  placeholder routes, and section sidebars.
+  route resolution, and the navigation contract used by the header and section
+  sidebars.
 - `src/content-models/homepage-content.ts` contains utility-bar links, brand
   assets, homepage promo content, About BBER copy, and footer data.
 - `src/content-models/research-content.ts` contains the stable copy and local
@@ -76,6 +76,9 @@ JSX:
 - `src/content-models/rgis.ts` contains the RGIS page copy, basemap catalog,
   GeoJSON normalization rules, year-frame grouping, metric pairing, and the
   normalized map view-model contract for `/data/rgis/`.
+- `src/components/site/not-yet-built.tsx` contains the shared unfinished-page
+  shell used by explicit route files for URLs that are in the navigation tree
+  but do not have their full implementation yet.
 
 This keeps the UI code ready for a future CMS-backed pages feed without mixing
 layout concerns with the data source.
@@ -234,6 +237,10 @@ The staff and directors pages mirror the live BBER contract:
   shared BBER data-bank selectors, keeps draft filter changes separate from the
   applied map until `Load`, and renders one active year frame at a time from
   the already loaded `makemap` response.
+- Unfinished URLs in the navigation tree now have explicit `page.tsx` files
+  that render the shared `NotYetImplemented` component. Route ownership stays
+  in the App Router filesystem instead of a generic catch-all placeholder
+  route.
 - `/api/bberdb/filters` is a first-party route handler that returns the
   normalized live filter model for one selected BBER DB table, including the
   live `tablevariables` payload shape where column names arrive under
@@ -262,13 +269,8 @@ The staff and directors pages mirror the live BBER contract:
   flow for charts and tables, while
   `src/components/site/api-endpoint-dialog.tsx` owns the reusable modal that
   displays copyable API endpoints instead of navigating away immediately.
-- `/search` is a local placeholder route used by the shared search UI shell.
-- `app/[...slug]/page.tsx` resolves known URLs from `pages.ts` and renders
-  placeholder pages for the current navigation structure.
+- `/search` is a local unfinished route used by the shared search UI shell.
 - Unknown paths use `notFound()` and fall through to `app/not-found.tsx`.
-
-The placeholder route uses `generateStaticParams` and `dynamicParams = false` so
-known nav paths are statically discoverable and unknown paths 404 cleanly.
 
 ## Section navigation strategy
 

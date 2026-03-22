@@ -8,7 +8,6 @@ frontend:
         - pnpm install --frozen-lockfile
     build:
       commands:
-        - rm -rf .next
         - pnpm build
   artifacts:
     baseDirectory: .next

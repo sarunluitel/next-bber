@@ -1,30 +1,19 @@
-import { PlaceholderPage } from "@/components/site/placeholder-page";
+import { NotYetImplemented } from "@/components/site/not-yet-built";
 
 export default async function SearchPage(props: PageProps<"/search">) {
   const { q } = await props.searchParams;
   const query = typeof q === "string" ? q.trim() : "";
 
   return (
-    <PlaceholderPage
+    <NotYetImplemented
       pathname="/search"
-      title="Search"
       lead={
         query
           ? `Search for “${query}” is not available yet.`
-          : "Search is currently under construction."
+          : "Search is not available yet."
       }
-      statusTitle="Under Construction"
-      statusMessage="Search is currently under construction. Please try again later."
-      trail={[
-        {
-          key: "Search",
-          node: {
-            title: "Search",
-            url: "/search",
-            children: {},
-          },
-        },
-      ]}
+      statusTitle="Search Not Yet Available"
+      statusMessage="Search is not available yet. Please check back soon."
     />
   );
 }

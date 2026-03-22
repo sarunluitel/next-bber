@@ -34,13 +34,13 @@ The app currently includes:
 - a Colonias section at `/data/colonias/` with a local methodology page and a
   county-grouped colonia maps directory
 - live server-side CMS feeds for homepage news and publications
-- a local `pages.ts` site tree used for navigation and placeholder routes
+- a local `pages.ts` site tree used for navigation and section sidebars
 - a shared data-driven section sidebar for nested pages under Data, Research,
   Subscribers, and About
 - a split-link primary navigation pattern so parent sections like `/about` and
   `/about/services` are directly reachable while still exposing child menus
-- placeholder pages for the current navigation structure
-- a search UI shell routed to a local placeholder page
+- explicit `NotYetImplemented` route files for the remaining unfinished pages
+- a search UI shell routed to a local `NotYetImplemented` page
 
 ## Content architecture
 
@@ -138,7 +138,7 @@ both a Leaflet choropleth map and the right-hand metric panel. Multi-year
 queries stay comma-separated in the shared query model, the UI groups the
 loaded features into explicit year frames with an active-year switcher, and
 RGIS downloads now bundle `<table>.xml` metadata alongside GeoJSON and
-shapefile exports through `/api/rgis/*`. The Leaflet map keeps its legend above
+shapefile exports through `/api/rgis/*`. The Leaflet map keeps its legend below
 the map pane, uses a wide fit for world-spanning extents such as the full U.S.
 view, and allows horizontal world wrapping instead of clamping drag movement to
 one copy of the map.
@@ -271,3 +271,8 @@ Current deployment caveat:
   on `api.bber.unm.edu`.
 - The contact page uses a client-side mailto form for demo-safe interaction
   without introducing a backend email dependency.
+
+
+# PERSONAL TODO
+check all the publications  and presentation numbers on strapi
+create 1 page demo for mrcog and center for women. show it on their site with new domain. 
