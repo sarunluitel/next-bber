@@ -724,7 +724,25 @@ export function RgisPageView({ pageData }: RgisPageViewProps) {
                   spacing={8}
                 >
                   {appliedMapModel.availableYears.map((year) => (
-                    <ToggleGroupItem key={year} value={year} variant="outline">
+                    <ToggleGroupItem
+                      key={year}
+                      value={year}
+                      variant="outline"
+                      className="rounded-full border-[var(--bber-border)] bg-white px-4 font-semibold text-[var(--bber-ink)] shadow-sm transition-[color,background-color,border-color,box-shadow,transform] hover:bg-white"
+                      style={
+                        activeYear === year
+                          ? {
+                              backgroundColor: "var(--bber-red)",
+                              borderColor: "var(--bber-red)",
+                              color: "white",
+                              boxShadow:
+                                "0 0 0 4px color-mix(in srgb, var(--bber-red) 16%, transparent), 0 10px 24px -16px var(--bber-red)",
+                              transform: "scale(1.03)",
+                            }
+                          : undefined
+                      }
+                      aria-label={`Show ${year} RGIS map`}
+                    >
                       {year}
                     </ToggleGroupItem>
                   ))}

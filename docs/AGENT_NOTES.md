@@ -2,6 +2,41 @@
 
 This file is the decision and audit ledger for architectural, dependency, workflow, and policy changes that affect how agents and humans work in this repository.
 
+For project overview and setup, read [README.md](../README.md).
+For workflow rules, read [AGENTS.md](../AGENTS.md).
+
+## How to use this file
+
+- Start with the most recent accepted entries that touch the area you are
+  changing.
+- Treat this file as the language-form change history for the repo.
+- Use it to recover intent, tradeoffs, and previously accepted implementation
+  constraints before reopening an area.
+
+## Current state at a glance
+
+The recent accepted work establishes these durable project facts. Add or Edit to these facts if the new task changes the current state in a meaningful way:
+
+- the site is a first-party rebuild for `https://bber.unm.edu`, not a wrapper
+  around that host
+- route ownership now lives directly in the App Router filesystem, with
+  explicit unfinished route files instead of a generic catch-all placeholder
+- `src/content-models/pages.ts` remains the shared navigation source for the
+  header and section sidebars
+- `/data` is a real editorial landing page with server-fetched previews rather
+  than a placeholder
+- `/data/bberdb/` is a staged first-party data portal backed by shared
+  metadata, first-party downloads, and a comma-separated multi-year
+  `periodyear` contract
+- `/data/rgis/` extends that same shared data-bank stack for map rendering and
+  requires XML sidecars in spatial downloads
+- both BBER DB and RGIS currently open on the shared Gross Receipts default
+  query
+- public-facing data-page copy must stay audience-facing and must not leak
+  implementation language
+- deployment uses the repo-owned Amplify build spec, but Next 16 compatibility
+  on Amplify still needs active verification
+
 ## Entry Template
 
 ### YYYY-MM-DD - Title

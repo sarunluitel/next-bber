@@ -1,148 +1,112 @@
 # VISUALIZATION_GUIDE.md
 
+For project overview and route map, read [README.md](../README.md).
+For workflow rules, read [AGENTS.md](../AGENTS.md).
+
 ## Purpose
-This project uses D3 as the foundational charting layer for custom data
-visualization.
 
-Observable Plot is also allowed when it improves delivery speed for exploratory
-or externally sourced statistical charts, provided the app still preserves
-explicit data validation, normalization, and formatting boundaries.
+This project treats data visualization as product infrastructure, not decorative
+UI.
 
-## Rules
-- Separate data validation, chart transformation, and SVG rendering concerns.
-- Prefer reusable chart primitives over copy-pasted chart files.
-- Empty, loading, and error states are part of the chart contract.
-- Axes, scales, legends, and formatters should not be recreated ad hoc in each component when a shared primitive is appropriate.
-- Accessibility is required: charts should expose titles, summaries, or tabular fallbacks where appropriate.
-- If Plot is used, treat it as a rendering layer only. Data-source parsing,
-  metric configuration, tooltip copy, and chart summaries should remain in
-  app-owned modules.
-- Any prose that depends on changing data, such as latest values, deltas,
-  rankings, date spans, or narrative summaries, must be derived from the
-  current normalized dataset at render time. Do not hardcode numbers or dates
-  that can become stale after an upstream refresh script runs.
-- Public-facing chart copy must read as finished site content for researchers,
-  faculty, policy audiences, and grant reviewers. Keep implementation notes,
-  migration context, and agent reasoning in comments or docs, not in rendered
-  HTML.
-- The same rule applies to tables, filter instructions, status banners, source
-  notes, and other non-chart UI on data pages. Public text should help a
-  research audience interpret the data, not describe internal implementation
-  details or future engineering plans.
-- If a chart offers downloads, treat those exports as part of the visualization
-  contract. API links, JSON payloads, and CSV/ZIP generation should be driven
-  from the same normalized server boundary as the chart data rather than from
-  ad hoc client transforms.
-- Map pages follow the same rule. Choropleth layers, hover summaries, selected
-  metrics, and GIS downloads should all be driven from one normalized server
-  payload rather than from separate ad hoc fetches or client-side joins.
-- Name shared chart infrastructure so it can move across dashboards without
-  carrying page-specific language. Dataset or page terminology belongs in the
-  config that initializes a chart, not in generic renderers, formatters, or
-  export helpers.
+D3 is the foundational charting layer for bespoke visualization work.
+Observable Plot is allowed when it speeds up delivery for chart families that
+do not need a fully custom D3 scene, as long as server normalization and
+formatting boundaries remain explicit.
+
+## Core rules
+
+- separate validation, normalization, rendering, and formatting concerns
+- keep chart and map contracts reusable across pages
+- define empty, loading, and error states as part of the visualization surface
+- keep accessibility in scope with titles, summaries, or table fallbacks where
+  appropriate
+- derive public-facing chart copy, summaries, deltas, date spans, and rankings
+  from normalized live data rather than hardcoded values
+- keep public text audience-facing and publication-ready
+- treat downloads as part of the same visualization contract, not as ad hoc
+  client transforms
 
 ## Recommended layering
-- `content-models/` → metric catalogs, selector normalization, and external
-  data contracts
-- `visualizations/data/` → data shaping and statistical helpers
-- `visualizations/scales/` → domain/range helpers
-- `visualizations/primitives/` → low-level reusable SVG pieces
-- `visualizations/charts/` → composed chart implementations
-- `visualizations/formatters/` → labels, ticks, numeric/date formatting
 
-For the current external-data work, keep one shared renderer contract per chart
-family. The first reusable line renderer lives at
-`src/visualizations/charts/external/line-graph.tsx`, while route-specific
-dashboard code should stay responsible only for compact card composition and
-selector state. Public data pages such as `/data/nm-statewide/`,
-`/data/econindicators/`, `/data/cpi`, and `/data/` should reuse that same
-renderer when they are presenting the same time-series shape instead of
-forking page-specific line chart components.
+- `src/content-models/`:
+  metric catalogs, selector normalization, and route-level view models
+- `src/lib/`:
+  external fetches, joins, filtering, and normalization
+- `src/visualizations/`:
+  chart renderers, scales, helpers, and primitives
+- `src/components/site/`:
+  page shells, chart cards, filters, and download UI
 
-For scatter or portfolio views such as the location quotient card on
-`/data/nm-statewide/`, keep the same split:
-- the server adapter owns all join logic, denominator rules, and data-quality filtering
-- the chart-card client component owns frame selection, animation controls, and
-  compact in-card tooltip state
-- the Plot renderer receives only one already-normalized frame at a time
+The server layer owns data trust and mathematical contracts. The client layer
+owns only interaction and display state.
 
-For mirrored bar views such as the population pyramid card on
-`/data/nm-statewide/`, keep the same split:
-- the server adapter owns age-band cleanup, total derivation, and annual frame construction
-- the chart-card client component owns year playback, scrubber state, and
-  hover detail
-- the SVG renderer receives one already-normalized frame plus a shared domain maximum
+## Shared chart families
 
-For donut views such as the educational-attainment card on
-`/data/nm-statewide/`, keep the same split:
-- the server adapter owns variable ordering, metadata labels, total derivation,
-  and missing-value warnings
-- the chart-card client component owns the compact legend and hover state,
-  including center-hover interactions
-- the SVG renderer receives only already-normalized slices plus the shared
-  total it should display in the center label
+### Time-series pages
 
-Portable chart primitives should stay compact by default:
-- card-level controls such as variable selectors, play or pause buttons,
-  download menus, and source lines belong inside the chart primitive by
-  composition
-- large explanatory panels, methodology sections, and always-visible tables do
-  not belong inside dashboard chart cards
-- if a page needs a table fallback, render it as a separate primitive or route
-  concern instead of baking it into every chart card
-- editorial landing pages can reuse the same chart renderers as static previews
-  by passing one already-normalized frame instead of rebuilding a page-specific
-  mini-chart stack
+Pages such as `/data/nm-statewide`, `/data/econindicators`, `/data/cpi`, and
+preview charts under `/data` should reuse shared line-rendering contracts when
+they are presenting the same series shape.
 
-Map-specific guidance:
-- Use Leaflet when the product needs raster basemaps, GeoJSON overlays,
-  hover/click geography interaction, fit-bounds behavior, and lightweight
-  choropleth rendering from a server-returned geometry payload.
-- Keep map engines client-only. The server boundary should normalize the
-  GeoJSON, metric catalog, feature summaries, and export payloads before the
-  client map component mounts.
-- If a GIS view offers spatial downloads, keep the XML metadata sidecar in the
-  same normalized export contract as the GeoJSON or shapefile archive.
+### Bubble, pyramid, and donut cards
 
-## D3 usage philosophy
-Use D3 for what it is best at:
+Keep the same split across compact chart-card families:
+
+- server adapters own joins, filtering, denominator rules, ordering, totals,
+  and data cleanup
+- client chart cards own selector, playback, hover, and download interaction
+- renderers receive already-normalized chart props
+
+### Map pages
+
+Use Leaflet when the product needs basemaps, GeoJSON overlays, fit-bounds
+behavior, and geography interaction from server-normalized map payloads.
+
+Map-specific rules:
+
+- keep the map engine client-only
+- normalize the GeoJSON, metric catalog, feature summaries, and export payloads
+  before the client map mounts
+- keep map downloads on the same normalized server contract as the rendered map
+- when spatial downloads are offered, include the XML metadata sidecar in the
+  same export contract
+
+## Tool roles
+
+Use D3 for:
+
 - scales
 - layouts
 - shapes
-- data transforms
+- transforms
 - interaction math
 
-Use React for what it is best at:
+Use React for:
+
 - component structure
 - state ownership
 - composition
 - lifecycle coordination
 
-Use Observable Plot for what it is best at:
+Use Observable Plot for:
+
 - fast, reviewable statistical chart rendering
-- responsive axes and marks for simple chart families
-- tooltip and pointer interactions that do not justify a fully custom D3 scene
-- animated frame-by-frame portfolio scatters when the temporal join logic is
-  already resolved server-side
+- simple responsive chart families
+- interactions that do not justify a fully custom D3 scene
 
 ## Invariants
-- Do not bury business logic inside anonymous D3 callbacks when named helpers would be clearer.
-- Do not bind raw CMS payloads directly to charts.
-- Do not bind raw external REST payloads directly to charts.
-- Do not mix fetching, parsing, and rendering into one chart component.
-- Keep tooltip logic and formatting logic reviewable.
-- If an upstream dataset ignores request filters or mixes multiple series in one
-  response, resolve that in the server normalization layer before rendering.
-- Do not ship chart annotations or summaries that embed transient data values
-  unless those values are computed from the live normalized series on each
-  render.
-- If a chart compares multiple upstream datasets to compute one metric, keep
-  the mathematical contract reviewable in a named server helper instead of
-  rebuilding it inside a client component or Plot callback.
 
-## Trigger for documentation updates
-Update this file when:
-- chart architecture changes
-- D3 usage conventions change
+- do not bind raw CMS payloads directly to charts
+- do not bind raw BBER REST payloads directly to charts
+- do not mix fetching, parsing, and rendering into one chart component
+- keep tooltip and formatting logic named and reviewable
+- resolve upstream quirks in the server normalization layer before rendering
+- keep shared visualization infrastructure chart-agnostic and page-agnostic
+
+## Update this doc when
+
+- chart or map architecture changes
+- visualization tool choices change
 - accessibility strategy changes
-- performance or rendering strategy changes
+- rendering or performance strategy changes
+- download behavior changes

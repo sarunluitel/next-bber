@@ -1,470 +1,150 @@
 # ARCHITECTURE.md
 
+For project overview and setup, read [README.md](../README.md).
+For workflow and task rules, read [AGENTS.md](../AGENTS.md).
+
 ## Overview
 
-This project is a Next.js App Router site for the UNM Bureau of Business and
-Economic Research. The current implementation focuses on a close recreation of
-the public homepage plus the first real research routes while establishing the
-long-lived structure for CMS-driven content and reusable shared chrome.
+This app is a Next.js App Router site for the UNM Bureau of Business and
+Economic Research. It combines:
 
-The app is expected to ship on `https://bber.unm.edu`, so that hostname should
-be treated as the app's own production origin rather than as an external site
-dependency.
+- a local information architecture and stable editorial content layer
+- server-only adapters for CMS and BBER REST data
+- reusable section shells, navigation, chart, map, and download primitives
+- explicit client islands only where interaction is required
 
-## Deployment shape
+The app is intended to ship on `https://bber.unm.edu`, so that hostname is a
+first-party origin, not an upstream dependency.
 
-- The repository now includes a root
-  [amplify.yml](/Users/sarunsair/Documents/Projects/next-bber/amplify.yml)
-  build spec for AWS Amplify Gen 2 hosting.
-- The spec assumes the current single-app layout, enables Corepack, installs
-  dependencies with `pnpm`, builds the app with `pnpm build`, publishes the
-  `.next` output, and caches both `.pnpm-store` and `.next/cache`.
-- The app currently runs on Next.js `16.2.0`, so Amplify deployment remains a
-  compatibility risk until AWS publishes SSR support beyond Next.js `15`.
+## System model
 
-## Current architectural shape
+### 1. Local information architecture
 
-### Shared site shell
+`src/content-models/pages.ts` is the navigation source of truth for:
 
-- `src/app/layout.tsx` owns the root document, metadata, and shared site shell.
-- `src/components/site/site-header.tsx` is mostly server-rendered and hands only
-  the interactive navigation layer to a client component.
-- `src/components/site/site-footer.tsx` is shared across the homepage,
-  unfinished-page routes, search, and not-found states.
-- `src/components/site/interactive-primary-nav.tsx` uses a website-style split
-  navigation pattern so parent IA nodes remain clickable pages instead of being
-  trapped behind menu triggers.
+- primary navigation
+- section sidebars
+- section landing pages
+- explicit unfinished route ownership
 
-### Local content boundaries
+Stable, low-churn editorial content is also modeled locally in
+`src/content-models/` rather than embedded directly in JSX.
 
-Stable, low-churn site content is modeled locally instead of being embedded in
-JSX:
+### 2. Server normalization boundaries
 
-- `src/content-models/pages.ts` contains the site tree, helper functions for
-  route resolution, and the navigation contract used by the header and section
-  sidebars.
-- `src/content-models/homepage-content.ts` contains utility-bar links, brand
-  assets, homepage promo content, About BBER copy, and footer data.
-- `src/content-models/research-content.ts` contains the stable copy and local
-  imagery for the research landing page.
-- `src/content-models/data-overview.ts` contains the local editorial copy,
-  inline-link content model, and preview-card contract for the Data landing
-  page.
-- `src/content-models/news-content.ts` contains the stable copy for the news
-  archive page.
-- `src/content-models/about-content.ts` contains the static About section
-  content, including services, history, helpful links, and contact content.
-- `src/content-models/colonias-content.ts` contains the Colonias methodology
-  page content plus the county-grouped colonia map directory.
-- `src/content-models/data-static-pages.ts` contains the local structured
-  content for the Open Data subsection and the NM Statewide Gross Receipts
-  reference page, using one reusable static-resource page contract for
-  narrative sections, link groups, and local CTAs.
-- `src/content-models/cpi.ts` contains the normalized CPI route model for the
-  trend chart, annual table, source metadata, and supporting public copy.
-- `src/content-models/location-quotient.ts` contains the QCEW request
-  contract, metadata normalization helpers, metric-aware LQ math, and the
-  frame contract consumed by the reusable bubble-scatter card.
-- `src/content-models/education-donut.ts` contains the `dp02` request
-  contract, educational-attainment metadata normalization helpers, slice
-  derivation, and the compact slice contract consumed by the donut chart card.
-- `src/content-models/population-pyramid.ts` contains the `pep_cc` request
-  contract, age-band normalization helpers, annual frame construction, and the
-  frame contract consumed by the portable population pyramid card.
-- `src/content-models/nm-statewide-dashboard.ts` contains the compact
-  six-card dashboard contract, per-card selector catalogs, download metadata,
-  and shared source-line helpers for the statewide dashboard.
-- `src/content-models/bberdb.ts` contains the local 75-table BBER data-portal
-  catalog, category labels, query helpers, sentinel mapping, and the
-  normalized filter/table view-model contract for `/data/bberdb/`.
-- `src/content-models/rgis.ts` contains the RGIS page copy, basemap catalog,
-  GeoJSON normalization rules, year-frame grouping, metric pairing, and the
-  normalized map view-model contract for `/data/rgis/`.
-- `src/components/site/not-yet-built.tsx` contains the shared unfinished-page
-  shell used by explicit route files for URLs that are in the navigation tree
-  but do not have their full implementation yet.
+External data is fetched and normalized on the server before it reaches route
+or presentation components.
 
-This keeps the UI code ready for a future CMS-backed pages feed without mixing
-layout concerns with the data source.
+Key adapter families:
 
-### CMS feed boundaries
+- CMS feeds under `src/lib/cms/`
+- BBER REST and dashboard adapters under `src/lib/`
+- normalized route and content contracts under `src/content-models/`
 
-Live CMS feeds are fetched on the server only:
+Use [docs/CMS_CONTRACT.md](./CMS_CONTRACT.md) for the detailed normalization
+rules.
 
-- `src/lib/cms/bber-homepage.ts` performs the server-side fetches with
-  `revalidate: 3600`.
-- `src/content-models/bber-homepage.ts` validates and normalizes raw CMS
-  payloads into app-owned view models.
-- Presentational components consume only normalized `BberNewsItem` and
-  `BberPublicationItem` data.
-- `src/lib/cms/bber-news.ts` performs the news archive fetches and reads
-  URL-based year, month, and query filters.
-- `src/content-models/bber-news.ts` validates and normalizes the news archive
-  payloads, derives filter options from the `indexes` feed, and applies
-  server-side text filtering after normalization.
-- `src/lib/cms/bber-research.ts` performs the publications archive fetches and
-  switches between featured and filtered modes based on URL search params.
-- `src/content-models/bber-research.ts` validates and normalizes publications
-  archive payloads, taxonomy indexes, and filter values.
-- `src/lib/cms/bber-about.ts` performs the staff and directors fetches for the
-  About section.
-- `src/content-models/bber-about-people.ts` validates and normalizes raw staff
-  and director payloads into the existing About page view models.
-- `src/lib/cms/bber-data-conferences.ts` performs the NM Data Users Conference
-  fetches for the conference index, archive group, and individual conference
-  detail pages.
-- `src/content-models/bber-data-conferences.ts` validates and normalizes the
-  `bber-data-pages` conference payloads into app-owned index/detail page models
-  and parses conference body content into renderable blocks.
-- `src/lib/external-bber.ts` performs server-only fetches against the BBER REST
-  metadata and `bbertable` endpoints for external chart routes.
-- `src/content-models/external-bber.ts` validates selector values, curates the
-  initial metric catalog, and normalizes raw REST responses into app-owned
-  chart view models.
-- `src/lib/econindicators.ts` performs server-only fetches against multiple
-  BBER REST `bbertable` datasets for the economic indicators dashboard and
-  normalizes each source into card-ready line-series models.
-- `src/lib/data-overview.ts` performs the server-only preview fetches for the
-  Data landing page and normalizes the latest location quotient and U.S.
-  population pyramid frames into lightweight preview models.
-- `src/content-models/econindicators.ts` defines the dashboard card catalog,
-  metric catalogs, response-level filters for noisy upstream datasets, and the
-  shared line-series content contract.
-- `src/lib/cpi.ts` performs server-only fetches against the BBER REST `v_cpi`
-  and `cpitab` endpoints, normalizes the monthly trend and annual table
-  separately, and keeps partial or failed sections reviewable in the page UI.
-- `src/lib/bberdb.ts` performs the server-only BBER data-portal fetch flow for
-  `/data/bberdb/`, derives supported filter keys from `tablevariables`, reads
-  live filter options from `tablevalues`, normalizes loaded `bbertable`
-  results, exposes first-party download payloads, and fast-fails upstream
-  timeouts into inline page states instead of route crashes. The same boundary
-  now preserves comma-separated `periodyear` selections for multi-year queries
-  instead of collapsing them back to one year.
-- `src/lib/bber-data-bank.ts` now owns the shared server-only metadata flow for
-  BBER DB and RGIS routes, including dataset validation, `tablevariables`
-  parsing, `tablevalues` requests, and the normalized filter model handoff.
-- `src/lib/rgis.ts` performs the server-only RGIS assembly for `/data/rgis/`,
-  calls the live `makemap` endpoint, normalizes the returned `FeatureCollection`
-  and metadata, and exposes first-party RGIS filter/map/download payloads.
-- `src/lib/rgis-downloads.ts` owns RGIS archive generation so GeoJSON and
-  shapefile exports can share the same normalized payload and XML sidecar
-  contract without weakening the server-only route adapter boundary.
-- `src/lib/rgis-xml.ts` builds the `<table>.xml` metadata sidecar from the
-  normalized RGIS payload using a repo-owned XML template in
-  `public/RGIS_XML/template.xml`.
-- `src/lib/location-quotient.ts` performs server-only fetches against QCEW
-  table and metadata endpoints, requests both selected-ownership numerators and
-  all-ownership denominators, and normalizes the joined result into frame-based
-  bubble-scatter data.
-- `src/lib/education-donut.ts` performs the server-only fetch against the
-  `dp02` REST table and normalizes one educational-attainment frame into
-  ordered donut slices with a shared total.
-- `src/lib/population-pyramid.ts` performs the server-only fetch against the
-  `pep_cc` REST table and normalizes annual age-by-sex population rows into a
-  frame-based pyramid contract.
-- `src/lib/nm-statewide-dashboard.ts` performs the server-only assembly for the
-  statewide dashboard, fetches the six live chart datasets, shapes compact
-  card-ready models, and exposes a chart-agnostic download payload registry.
+### 3. Route composition
 
-The publications archive mirrors the live BBER contract:
+Routes in `src/app/` fall into four families:
 
-- `featured=true` for the default publications view
-- `indexes` for category, community, and year filter options
-- `year`, `category`, and `community` query params for filtered results
+- local editorial routes such as `/research`, `/subscribers`, `/data`,
+  `/data/open-data/*`, `/data/colonias`, and
+  `/data/nm-statewide/gross-receipts`
+- live CMS-backed routes such as `/news`, `/research/publications`,
+  `/about/staff`, `/about/directors`, and `/data/nm-duc`
+- live BBER REST routes such as `/data/nm-statewide`, `/data/econindicators`,
+  `/data/cpi`, `/data/bberdb`, and `/data/rgis`
+- explicit unfinished routes that render `src/components/site/not-yet-built.tsx`
 
-The news archive mirrors the live BBER contract:
+The App Router filesystem owns route ownership directly. Unfinished pages use
+explicit route files rather than a generic catch-all placeholder route.
 
-- `indexes` for available year/month combinations
-- `year` and `month` query params for archive results
-- a local `q` filter applied only after the raw archive response is normalized
+### 4. Client interaction surfaces
 
-The staff and directors pages mirror the live BBER contract:
+Client components should be limited to interaction-heavy surfaces:
 
-- `GET /api/staff` for the current staff directory and current staff bios
-- `GET /api/directors` for the director history directory and director bios
-- staff are grouped by `stoppedWorkingDate`, with current employees in the main
-  grid and past employees in a collapsed directory section
-- profile routes are derived from the upstream `slug`
+- primary navigation menus and mobile disclosure
+- section-sidebar disclosure
+- filter controls that update URL or staged query state
+- chart-card hover, playback, selector, and download interactions
+- RGIS Leaflet map rendering and hover or pin state
+- small page-local interaction surfaces such as the About contact form
 
-## Route strategy
+Page rendering, external fetching, and normalization stay server-owned.
 
-- `/` is the fully implemented homepage.
-- `/news` is a dynamic server-rendered archive page backed by live CMS data and
-  URL-based filters.
-- `/research` is a local-content landing page that matches the live research
-  section structure.
-- `/research/publications` is a dynamic server-rendered archive page backed by
-  live CMS data and URL-based filters.
-- `/about` is a real local-content section landing page.
-- `/about/[...slug]` renders a hybrid About section:
-  static section pages come from local content, while `/about/staff`,
-  `/about/directors`, and their bio subpages are fetched from the live CMS and
-  normalized before rendering.
-- `/subscribers` is a real local-content section landing page.
-- `/subscribers/[...slug]` renders local subscriber pages such as FOR-UNM
-  access and the privacy policy through a dedicated content model rather than
-  the generic placeholder route.
-- `/data` is a local-content section landing page that mirrors the live Data
-  overview and layers in two server-fetched preview charts for the latest
-  location quotient and United States population frames.
-- `/data/apidoc` is a local static documentation route for the public data API,
-  with route-owned copy and examples instead of embedded backend tooling.
-- `/data/open-data` and its child routes under `/data/open-data/*` are local
-  static resource pages backed by a shared content model and renderer because
-  the live site exposes editorial copy and outbound links rather than API-fed
-  runtime data.
-- `/data/bberdb` is a server-rendered data-portal route that keeps the dataset
-  catalog local, derives visible filters from live metadata one table at a
-  time, keeps draft query state separate from the applied table until the user
-  clicks `Load`, opts out of route-level caching so transient upstream outages
-  do not freeze fallback HTML, and lets the client retry the initial
-  metadata-plus-table load when the first render degrades. Its `periodyear`
-  filter is a dropdown-based multi-select whose outgoing query value remains a
-  comma-separated string so the page, downloads, and future visualizations can
-  all share one BBER query contract.
-- `/data/colonias` is a local static section page for colonia methodology,
-  downloads, and reference materials.
-- `/data/colonias/nm-colonia-maps` is a local static directory page for
-  county-grouped colonia map PDFs published through `api.bber.unm.edu`.
-- `/data/cpi` is a dynamic server-rendered CPI route that reads the live BBER
-  REST monthly trend and annual table endpoints while reusing the shared line
-  renderer contract.
-- `/data/nm-duc` is a live CMS-backed conference landing page that reads the
-  `duc-index` record plus the `data-conferences` archive feed from
-  `api.bber.unm.edu`.
-- `/data/nm-duc/[slug]` renders individual conference pages from the same live
-  archive contract and keeps dynamic params enabled so new conference slugs can
-  resolve automatically after upstream updates.
-- `/data/nm-statewide` is a dynamic server-rendered dashboard route that
-  recreates the live statewide data page with six compact chart cards, shared
-  download actions, and portable client primitives for selectors and playback.
-- `/data/nm-statewide/gross-receipts` is a local static reference page within
-  the NM Statewide section. It intentionally stays separate from the live
-  dashboard stack because the public page is explanatory copy plus local calls
-  to the Data Portal and contact page, not a runtime visualization.
-- `/data/econindicators/` is a dynamic server-rendered dashboard route that
-  recreates the live multi-chart indicators page from BBER REST sources while
-  reusing one shared client line renderer across all cards.
-- `/data/rgis` is a dynamic server-rendered map explorer route that reuses the
-  shared BBER data-bank selectors, keeps draft filter changes separate from the
-  applied map until `Load`, and renders one active year frame at a time from
-  the already loaded `makemap` response.
-- Unfinished URLs in the navigation tree now have explicit `page.tsx` files
-  that render the shared `NotYetImplemented` component. Route ownership stays
-  in the App Router filesystem instead of a generic catch-all placeholder
-  route.
-- `/api/bberdb/filters` is a first-party route handler that returns the
-  normalized live filter model for one selected BBER DB table, including the
-  live `tablevariables` payload shape where column names arrive under
-  `columns[]`.
-- `/api/bberdb/table` is a first-party route handler that returns the currently
-  applied BBER DB table payload with display-name headers, leading
-  geography/time/industry context columns, newest-first row ordering, compact
-  multi-geography titles, system-label overrides such as `Period`, and source
-  metadata.
-- `/api/bberdb/download` is a first-party route handler that serves API-link
-  descriptor JSON plus JSON and CSV ZIP exports for BBER DB queries from the
-  same normalization boundary used by the route UI.
-- `/api/rgis/filters` is a first-party route handler that returns the
-  normalized live RGIS filter model from the shared BBER data-bank metadata
-  boundary.
-- `/api/rgis/map` is a first-party route handler that returns the normalized
-  RGIS map payload, including year frames, metric options, feature summaries,
-  source metadata, and the upstream `makemap` API URL for the current query.
-- `/api/rgis/download` is a first-party route handler that serves API-link
-  descriptor JSON plus `GeoJSON + XML` and `Shapefile + XML` zip exports from
-  the same normalized payload used by the route UI.
-- `/api/chart-download/[chartId]` is a first-party route handler that serves
-  API descriptor JSON plus JSON and CSV ZIP exports for compact statewide chart
-  cards from the same server-normalized data boundary used for rendering.
-- `src/components/site/data-download-menu.tsx` owns the shared client download
-  flow for charts and tables, while
-  `src/components/site/api-endpoint-dialog.tsx` owns the reusable modal that
-  displays copyable API endpoints instead of navigating away immediately.
-- `src/components/site/static-resource-page-view.tsx` owns the reusable shell
-  for local link-and-narrative pages that do not need runtime data fetches but
-  should still share the section shell, content cards, and internal-vs-external
-  link handling.
-- `/search` is a local unfinished route used by the shared search UI shell.
-- Unknown paths use `notFound()` and fall through to `app/not-found.tsx`.
+## Shared infrastructure
 
-## Section navigation strategy
+### Navigation
 
-Nested section pages use one shared sidebar pattern driven entirely by
-`src/content-models/pages.ts`:
+The site uses one local navigation model in `src/content-models/pages.ts`.
 
-- `src/components/site/section-page-shell.tsx` applies the shared two-column
-  section layout for pages that participate in section navigation.
-- `src/components/site/section-sidebar.tsx` renders the sidebar with shadcn
-  `Card`, `Button`, `Accordion`, and `Separator` primitives.
-- `getSectionSidebarModel()` in `src/content-models/pages.ts` derives the
-  sidebar model from a pathname instead of from route-local link lists.
+- header navigation and section sidebars derive from the same page tree
+- parent pages remain clickable pages, not just menu triggers
+- section sidebars show either children or siblings based on the current path
 
-Sidebar behavior is intentionally hybrid:
+### Data downloads
 
-- section landing pages show their child pages
-- leaf pages show their siblings under the same parent
-- `Go Back` always targets the parent section, or `/` for top-level section
-  roots
+Shared download infrastructure lives in `src/components/site/` and route
+handlers under `src/app/api/`.
 
-This keeps header navigation, placeholder routing, and left-rail section
-navigation aligned to the same local information architecture source.
+Key shared pieces:
 
-## Primary header navigation strategy
+- `data-download-menu.tsx`
+- `data-download-dropdown.tsx`
+- `api-endpoint-dialog.tsx`
 
-The global header navigation is also driven entirely from
-`src/content-models/pages.ts`.
+These are reused across dashboards, BBER DB, and RGIS instead of being
+reimplemented per page.
 
-- `getPrimaryNavigationBranches()` and `getNavigationBranch()` derive recursive
-  menu branches from the page tree.
-- Every parent node stays a real page link.
-- A separate chevron control opens the submenu on desktop and mobile.
-- Each submenu begins with a synthetic `Overview` item that points to the
-  parent page itself.
-- Nested parents follow the same split-link pattern recursively.
+### Shared BBER data-bank stack
 
-This avoids the common site-navigation failure mode where parent landing pages
-like `/about` or `/about/services` exist in the route tree but are unreachable
-from the primary navigation because the menu trigger consumes the interaction.
+`/data/bberdb` and `/data/rgis` share the same metadata and selector boundary:
 
-## Server and client boundaries
+- shared dataset catalog and query rules in `src/content-models/bberdb.ts`
+- shared metadata flow in `src/lib/bber-data-bank.ts`
+- BBER DB table normalization in `src/lib/bberdb.ts`
+- RGIS map normalization in `src/lib/rgis.ts` and
+  `src/content-models/rgis.ts`
 
-### Server components
+Keep `periodyear` comma-separated for multi-year queries, and treat RGIS
+downloads as part of the same server-normalized contract.
+
+## Server and client boundary rules
 
 Use server components for:
 
-- page rendering
-- CMS fetching
-- payload normalization handoff
-- reading route search params for publications filters
-- reading route search params for news filters
-- route resolution for placeholders
-- route resolution for local About pages and CMS-backed About people pages
-- metadata and shell composition
+- route rendering
+- metadata
+- CMS and BBER REST fetches
+- normalization
+- route-level search param handling
+- page-shell composition
 
-### Client components
+Use client components only for:
 
-Use client components only where interaction is required:
+- UI state
+- URL-updating controls
+- staged filter forms
+- chart and map interaction
+- modals, menus, and disclosure widgets
 
-- desktop dropdown navigation
-- mobile sheet navigation
-- accordion disclosure in the mobile menu
-- split-link desktop and mobile header menu controls for parent pages
-- accordion disclosure in the mobile section sidebar
-- publications filter controls that update the URL with sanctioned query params
-- news filter controls that update the URL with sanctioned query params
-- the About contact form, which uses a client-side mailto handoff and live word
-  count
-- compact chart-card interactions such as variable menus, playback controls,
-  hover state, and download menus for the statewide and economic-indicators
-  dashboards
-- the BBER DB and RGIS staged selector controls, year multi-selects, API-link
-  modals, map hover or pinned state, and client-only Leaflet rendering for
-  `/data/rgis`
-- the collapsed past-employees disclosure on `/about/staff`
+Do not move external parsing or normalization into client components.
 
-Homepage, research landing, and publication result content all remain
-server-rendered. The news archive list is also server-rendered.
+## Asset and host strategy
 
-The Subscribers section uses the same server-rendered local-content pattern:
+- repo-owned stable assets live in `public/`
+- internal links should use route constants or root-relative paths
+- do not hardcode `https://bber.unm.edu/...` for first-party pages or assets
+- CMS-hosted images remain bounded to explicit remote patterns only where
+  needed
 
-- route content comes from `src/content-models/subscribers-content.ts`
-- `/subscribers/forunm/` may present access UI without simulating unsupported
-  backend auth flows
-- privacy and subscriber-information copy stay local and reviewable
+## Deployment shape
 
-The NM Data Users Conference section uses a CMS-backed long-form content
-pattern:
+The repo includes a root [amplify.yml](../amplify.yml) build spec for AWS
+Amplify Gen 2. It enables Corepack, installs with `pnpm`, builds the app, and
+publishes `.next`.
 
-- the route fetches the conference index page and archive feed on the server
-- conference body content is normalized before rendering, including inline
-  links, images, headings, lists, and local-route rewrites for first-party BBER
-  links
-- detail pages reuse the same archive feed so sidebar navigation and the latest
-  conference card stay in sync with upstream content
-- new conference pages must be discoverable from the archive feed without
-  adding hardcoded slugs to the route layer
-
-The external chart route keeps the same boundary:
-
-- the page and data-fetch layer remain server-rendered
-- selector interaction and Plot rendering live in a single client entry point
-- chart renderers consume only normalized chart-series props, not raw API
-  payloads
-
-The economic indicators dashboard follows the same boundary:
-
-- the route fetches and normalizes all indicator cards on the server
-- upstream quirks such as ignored query filters or formatted currency strings
-  are resolved inside the adapter layer rather than in the UI
-- the dashboard client owns only presentation-level search, metric selection,
-  and shared time-window filtering
-- every card reuses the shared line renderer contract in
-  `src/visualizations/charts/external/line-graph.tsx`
-
-The CPI route follows the same visualization boundary:
-
-- the route fetches the monthly trend and annual table on the server
-- raw API payloads are normalized before reaching the page renderer
-- the shared Plot-based line renderer receives only normalized time-series
-  points and formatting metadata
-- trend summary copy, latest values, and coverage labels are derived from the
-  current normalized series rather than hardcoded into the page
-- chart downloads are served through a local route handler so JSON exports and
-  CSV ZIP generation stay server-owned and reusable across future dashboards
-- the client only owns the download menu interaction and the API-link modal
-
-The location quotient route follows the same visualization boundary:
-
-- the route fetches local, reference, base-year, and denominator datasets on
-  the server
-- raw QCEW rows and metadata are normalized before they reach the client
-- the client owns only frame playback, year selection, and synchronized table
-  presentation
-- the Plot renderer receives one normalized frame at a time instead of raw
-  multi-year API payloads
-- data-quality filtering for aggregate codes, missing base-year employment, and
-  zero denominators stays inside the server normalization layer
-
-The API documentation page follows a different boundary:
-
-- route content is local and static rather than fetched from an external source
-- the page documents supported read-only API behavior only
-- unsupported backend-only features should be omitted from public UI instead of
-  rendered as placeholders
-
-The Colonias section follows a local-content boundary:
-
-- live-site and network inspection should be performed before assuming a CMS
-  source, because the page currently behaves like editorial content with linked
-  files rather than a dedicated API feed
-- page copy, downloadable resource metadata, and the county-grouped map
-  directory live in a reviewable local content model
-- published XLS, ZIP, and PDF assets still resolve to `api.bber.unm.edu`
-
-## Asset strategy
-
-Stable homepage shell assets are stored locally in `public/bber/`:
-
-- horizontal BBER logo
-- hero image
-- section header art
-- conference and forecast promo banners
-- research overview sample image
-
-Stable About-section shell assets are also stored locally in `public/bber/about/`
-so the app does not depend on the current `bber.unm.edu/assets/**` host at
-runtime.
-
-Publication cards use remote CMS-hosted feature images through `next/image`
-remote patterns limited to `https://api.bber.unm.edu/api/files/**`.
-
-The About section still uses remote CMS images from one bounded upstream host:
-
-- `https://api.bber.unm.edu/api/files/**` and
-  `https://api.bber.unm.edu/uploads/**` for portraits and service imagery
-
-Internal navigation inside local content models should use route constants from
-`src/content-models/pages.ts` or root-relative paths. Do not hardcode
-`https://bber.unm.edu/...` for first-party pages, because those links should
-resolve within this app after deployment.
+The app currently targets Next.js 16, so hosted behavior should be verified on
+each deployment because Amplify support has historically lagged the latest Next
+line.

@@ -1,377 +1,137 @@
 # CMS_CONTRACT.md
 
+For project overview and route map, read [README.md](../README.md).
+For workflow rules, read [AGENTS.md](../AGENTS.md).
+
 ## Principle
-The CMS is an external producer. The frontend is a strict consumer.
+
+The CMS and BBER REST APIs are external producers. The frontend is a strict
+consumer.
 
 That means:
-- raw CMS payloads are not trusted automatically
-- server boundaries must validate payloads
-- internal UI should consume normalized models, not raw documents
 
-## Current live feeds and archive endpoints
+- fetch external payloads on the server only
+- validate the minimal required fields
+- normalize into app-owned view models
+- render from normalized models only
 
-The frontend currently consumes these BBER CMS endpoints:
+## Upstream source families
 
-1. `GET https://api.bber.unm.edu/api/bber-news?limit=3`
-2. `GET https://api.bber.unm.edu/api/bber-news/indexes`
-3. `GET https://api.bber.unm.edu/api/bber-news/?year=YYYY&month=M&limit=100`
-4. `GET https://api.bber.unm.edu/api/staff`
-5. `GET https://api.bber.unm.edu/api/directors`
-6. `GET https://api.bber.unm.edu/api/bber-research/publications?limit=5`
-7. `GET https://api.bber.unm.edu/api/bber-research/publications?featured=true`
-8. `GET https://api.bber.unm.edu/api/bber-research/publications/indexes`
-9. `GET https://api.bber.unm.edu/api/bber-research/publications?year=YYYY&category=ID&community=ID&limit=100`
+### CMS feeds
 
-The frontend also consumes these BBER REST data endpoints:
+The app consumes live CMS data for:
 
-10. `GET https://api.bber.unm.edu/api/data/rest/metadata?api=tablevariables&table=TABLE_NAME`
-11. `GET https://api.bber.unm.edu/api/data/rest/metadata?api=tablevalues&table=TABLE_NAME&variables=[...]`
-12. `GET https://api.bber.unm.edu/api/data/rest/bbertable?table=TABLE_NAME&...`
-13. `GET https://api.bber.unm.edu/api/data/rest/makemap?table=TABLE_NAME&...`
+- homepage news
+- news archive and indexes
+- publications archive and indexes
+- staff and directors
+- NM Data Users Conference pages
 
-First-party download routes can also expose normalized API descriptor payloads
-that point at those upstream endpoints instead of redirecting immediately.
+### BBER REST feeds
+
+The app consumes BBER REST data for:
+
+- metadata via `tablevariables` and `tablevalues`
+- tabular data via `bbertable`
+- map data via `makemap`
+- CPI trend and annual table feeds
+
+First-party route handlers may expose normalized API descriptor payloads that
+point at those upstream endpoints instead of redirecting users there
+immediately.
 
 ## Required pipeline
 
 1. fetch raw payload on the server
-2. validate the minimal required fields manually
-3. normalize into app-owned view models
-4. render from normalized models only
+2. validate only the fields needed to trust the shape
+3. normalize to a repo-owned view model
+4. render UI from that normalized model
 
-## Normalized models
+Exact TypeScript shapes live in `src/content-models/`. This document captures
+the durable behavioral rules rather than every field name.
 
-### `BberNewsItem`
+## Normalization contracts by area
 
-Used by the homepage news section.
+### Homepage, news, and publications
 
-- `id: string`
-- `title: string`
-- `publishedDate: string`
-- `description: string`
-- `href: string`
+- drop incomplete or invalid entries rather than guessing missing data
+- derive descriptions from the best available upstream summary field
+- resolve publication links PDF-first when a PDF exists
+- derive filter options from archive index payloads, not from ad hoc client
+  parsing
+- apply local text filtering only after archive items have been normalized
 
-Normalization rules:
+### About staff and directors
 
-- `title` comes from `title`
-- `publishedDate` comes from `date`
-- `description` prefers `short_descr`, then `content`, then a fallback message
-- `href` must come from `external_link`
-- invalid or incomplete items are dropped
+- keep the broader About section local, but treat staff and directors as
+  explicitly CMS-backed
+- split staff into current and past employees using `stoppedWorkingDate`
+- treat `sortOrder` as ordering only; `sortOrder: 0` entries are still valid
+- derive excerpt text from the first meaningful biography paragraphs
+- normalize profile sections from the shared source description instead of
+  letting the page parse raw body content directly
 
-### `BberPublicationItem`
+### BBER DB filter and query model
 
-Used by the homepage publications section.
+- keep the dataset catalog and category labels local to the repo
+- derive supported filters from upstream metadata, but expose only the
+  app-supported visible filter surface
+- keep `/data/bberdb/` and `/data/rgis/` on the same shared query contract
+- preserve `periodyear` as a comma-separated multi-year selection
+- keep default table and selector behavior centralized in
+  `src/content-models/bberdb.ts`
+- degrade to inline upstream-unavailable states when the upstream service
+  fails or times out instead of crashing the route
 
-- `id: string`
-- `title: string`
-- `publishedDate: string`
-- `description: string`
-- `href: string`
-- `hrefKind: "pdf" | "external"`
+### BBER DB table model
 
-Normalization rules:
+- promote context columns such as geography, time, industry, and ownership
+  ahead of metric columns
+- prefer upstream metadata display names for headers
+- map legacy negative sentinel values through the published exception labels
+- derive result titles and source lines from the normalized row set and query
+- keep rows newest-first by normalized time fields
 
-- `title` comes from `title`
-- `publishedDate` comes from `date`
-- `description` prefers `short_descr`, then `content`, then a fallback message
-- `href` prefers `pdf.url` resolved against `https://api.bber.unm.edu`, then
-  `external_link`
-- invalid or incomplete items are dropped
+### RGIS map model
 
-### `BberPublicationRecord`
-
-Used by `/research/publications`.
-
-- `id: string`
-- `title: string`
-- `publishedDate: string`
-- `description: string`
-- `href: string`
-- `hrefKind: "pdf" | "external"`
-- `categories: string[]`
-- `communities: string[]`
-- `image: { src, alt, width, height } | null`
-
-Normalization rules:
-
-- publication link resolution follows the same PDF-first rule as the homepage
-- `categories` comes from each `categories[].category`
-- `communities` comes from each `communities[].community`
-- `image` prefers `featureImage.formats.small`, then `featureImage.url`, both
-  resolved against `https://api.bber.unm.edu`
-- entries without a valid title, date, or resolved link are dropped
-
-### `BberAboutPersonDirectoryPage`
-
-Used by `/about/staff` and `/about/directors`.
-
-- `path: string`
-- `title: string`
-- `lead: string`
-- `eyebrow: "About"`
-- `sidebarPath: string`
-- `kind: "people-directory"`
-- `currentPeople: AboutPersonSummary[]`
-- `pastPeople?: AboutPersonSummary[]`
-- `pastPeopleHeading?: string`
-
-Normalization rules:
-
-- staff records come from `GET /api/staff`
-- staff are split into `currentPeople` and `pastPeople`
-- `stoppedWorkingDate` null or absent means current employee
-- `stoppedWorkingDate` present means past employee
-- the staff page renders `pastPeople` inside a collapsed `Past Employees`
-  section, but those people still keep valid bio routes
-- past staff bio pages also show a `Past Employee` label under the person’s
-  role heading
-- `sortOrder` is used only for ordering; `sortOrder: 0` records are still valid
-  staff entries and must not be dropped
-- directors come from `GET /api/directors`
-- both collections are sorted by `sortOrder` descending to mirror the live site
-- portrait images prefer `image.formats.medium.url`, then smaller CMS formats,
-  then the root `image.url`, all resolved against `https://api.bber.unm.edu`
-- staff portrait URLs may come back under either `/api/files/**` or
-  `/uploads/**`, so both path families must be allowed by the Next image
-  configuration
-- excerpt text comes from the first non-heading paragraph in `description`
-
-### `BberAboutPersonProfilePage`
-
-Used by `/about/staff/[slug]` and `/about/directors/[slug]`.
-
-- `path: string`
-- `title: string`
-- `eyebrow: "About"`
-- `sidebarPath: string`
-- `kind: "person-profile"`
-- `directoryPath: string`
-- `directoryTitle: string`
-- `person: AboutPersonSummary`
-- `sections: AboutContentSection[]`
-
-Normalization rules:
-
-- profile content comes from the same upstream staff/director records as the
-  directory pages
-- `description` is split into paragraphs at blank lines before rendering
-- standalone Markdown links in the upstream description are normalized into
-  structured link rows
-- standalone Markdown headings such as `# In Memoriam ...` become section titles
-- director tenure labels are derived from `tenureStart` and `tenureEnd` as
-  `YYYY to YYYY` or `YYYY to Present`
-- profile routes are keyed by the upstream `slug`
-
-### `BberNewsArchiveItem`
-
-Used by `/news`.
-
-- `id: string`
-- `title: string`
-- `publishedDate: string`
-- `description: string`
-- `href: string`
-- `hrefKind: "pdf" | "external"`
-
-Normalization rules:
-
-- `title` comes from `title`
-- `publishedDate` comes from `date`
-- `description` prefers `short_descr`, then `content`, then a fallback message
-- `href` prefers `pdf_url` resolved against `https://api.bber.unm.edu`, then
-  `external_link`
-- invalid or incomplete items are dropped
-
-### `BberNewsIndexes`
-
-Used by `/news` filter controls.
-
-- `years: Array<{ value: string; label: string }>`
-- `monthsByYear: Record<string, Array<{ value: string; label: string; year: string }>>`
-
-Normalization rules:
-
-- the upstream `indexes` payload currently exposes `dates[]`
-- `years` are derived from the date strings and sorted descending
-- `monthsByYear` is derived from the same dates, grouped by year and sorted
-  newest-to-oldest within each year
-- month query param values must follow the live API contract, which is
-  calendar-month numbering `1..12`
-- invalid dates are dropped
-
-### `BberPublicationIndexes`
-
-Used by `/research/publications` filter controls.
-
-- `years: Array<{ value: string; label: string }>`
-- `categories: Array<{ value: string; label: string }>`
-- `communities: Array<{ value: string; label: string }>`
-
-Normalization rules:
-
-- `years` are derived from `dates[]`
-- category option values come from `id`, labels from `category`
-- community option values come from `id`, labels from `community`
-- invalid option entries are dropped
-
-### `BberDbFilterModel`
-
-Used by `/data/bberdb` and `GET /api/bberdb/filters`.
-
-- `tableName: string`
-- `supportedFilterKeys: BberDbFilterKey[]`
-- `visibleFilterKeys: BberDbVisibleFilterKey[]`
-- `filters: Array<{ key, label, value, options }>`
-- `draftQuery: BberDbAppliedQuery`
-
-Normalization rules:
-
-- the 75-table dataset catalog and `Data Category` labels stay local to the
-  repo
-- `supportedFilterKeys` are derived by intersecting `tablevariables` with the
-  shared app-owned filter-key union, whether the upstream metadata arrives as a
-  raw array or a `{ columns: [...] }` object
-- only the current live filter surface is exposed in `visibleFilterKeys`:
-  `areatype`, `periodyear`, `periodtype`, plus conditional `indcode` and
-  `ownership`
-- `tablevalues` is fetched only for the visible filter keys of the currently
-  selected table
-- defaults match the shared public portal behavior: `/data/bberdb/` and
-  `/data/rgis/` open on `v_rp80` (`Gross Receipts`) with `areatype=04`
-  (`County`), `periodyear=2025,2024`, `periodtype=03` (`Monthly`),
-  `indcode=00` (`Total`), and `ownership=00` (`Total`); other tables still
-  fall back to the first `areatype`, latest numeric `periodyear`, highest
-  numeric `periodtype`, and first actual `indcode` or `ownership` option when
-  present
-- requested `periodyear` values may be a comma-separated year list, and the
-  normalized query preserves only valid selected years in the published option
-  order so one BBER DB query model can serve the page, downloads, and future
-  visualizations
-- the page route remains dynamic and the client retries the default query when
-  the initial server render degrades because of a transient upstream failure
-
-### `BberDbTableViewModel`
-
-Used by `/data/bberdb` and `GET /api/bberdb/table`.
-
-- `datasetLabel: string`
-- `tableName: string`
-- `query: BberDbAppliedQuery`
-- `resultTitle: string`
-- `sourceLine: string`
-- `apiUrl: string`
-- `description: string`
-- `columns: Array<{ key, header, description }>`
-- `rows: Array<{ id, cells }>`
-- `rawRowCount: number`
-- `sourceMetadata: BberDbSourceMetadata`
-
-Normalization rules:
-
-- the upstream `bbertable` response is fetched on the server only
-- context columns such as geography, year, period, industry, and ownership are
-  promoted ahead of metric columns when the upstream row shape includes them
-- headers come from `metadata.columns[].display_name`, while column order
-  follows the published metadata order with any unreported row keys appended
-- known awkward system labels can be overridden in the normalized model, for
-  example `period -> Period`
-- trailing metric qualifiers such as `(Percent Allocated)` stay in the header
-  string, but the table UI may render them on stacked lines to reduce width
-- negative sentinel values `-1` through `-8` are mapped through the legacy
-  `dataExceptions` labels, including `-8 => Not applicable`
-- `resultTitle` is derived from unique `geographyname` values in the current
-  row set and compacts long geography lists after the first label
-- `sourceLine` is derived from the upstream table source and the applied year
-  or year selection
-- rows are sorted newest-first by `periodyear`, then `period`, before the
-  rendered table model is returned
-- when the upstream BBER REST service times out or rejects a selected table,
-  the first-party page keeps rendering and exposes the failure as an inline
-  upstream-unavailable state rather than crashing the route
-- the route-level loading UI can show staged progress copy while the initial
-  server render is still fetching metadata and the default table payload
-
-### `RgisMapViewModel`
-
-Used by `/data/rgis` and `GET /api/rgis/map`.
-
-- `datasetLabel: string`
-- `tableName: string`
-- `query: BberDbAppliedQuery`
-- `apiUrl: string`
-- `description: string`
-- `sourceLine: string`
-- `sourceMetadata: BberDbSourceMetadata`
-- `availableYears: string[]`
-- `activeYear: string`
-- `metricOptions: Array<{ key, label, marginKey, description, helperBreadcrumbs }>`
-- `defaultMetricKey: string | null`
-- `yearFrames: Array<{ year, featureCollection, featureSummaries }>`
-- `featureCount: number`
-
-Normalization rules:
-
-- RGIS reuses the same local 75-table dataset catalog and shared filter model
-  as `/data/bberdb`, including comma-separated multi-year `periodyear`
-  selections
-- the upstream `makemap` payload is fetched on the server only and normalized
-  as a `FeatureCollection` with one active year frame per loaded year
-- when a yearly frame contains multiple rows for the same geography, such as
-  monthly gross-receipts records, the normalizer keeps only the newest record
-  per geography by preferring the latest `release` and then the highest
-  `period` so the map renders one interactive polygon per place
-- RGIS hover and pin state must use a geography identity that falls back from
-  `geo_id` or `geoid` to `stfips:areatype:area` when upstream map rows do not
-  include a dedicated GEOID column
-- context fields such as `stfips`, `areatype`, `area`, `name`, `extent`,
-  `geo_id`, `periodyear`, `periodtype`, and `period` stay in feature summaries
-  and are not exposed as choropleth metric choices
-- estimate and margin-of-error columns are paired into one metric option so
-  the UI can show `estimate (±margin)` instead of separate margin rows
-- `column_description` values split on `!!` become audience-facing helper
-  breadcrumbs in the metric list when present
-- `availableYears` are sorted newest-first and multi-year loads render one
-  explicit active year at a time instead of blending repeated geographies into
-  one map
-- source lines and download payloads are derived from the same normalized map
-  payload so the map, API modal, GeoJSON export, and shapefile export stay in
-  sync
-- RGIS spatial downloads must bundle a matching `<table>.xml` sidecar built
-  from the normalized metadata, selected geography and period labels, loaded
-  years, and feature bounds
+- reuse the shared BBER data-bank dataset catalog, query rules, and filter
+  model rather than creating an RGIS-only selector contract
+- normalize the `makemap` payload into explicit year frames
+- when one year contains repeated rows for the same geography, keep one feature
+  per geography by preferring the newest release and then the highest period
+- use a geography identity that can fall back from `geo_id` or `geoid` to
+  `stfips:areatype:area`
+- pair estimates with their matching margin-of-error fields in the metric list
+- drive the map, side panel, API modal, and downloads from the same normalized
+  payload
+- spatial downloads must bundle the matching `<table>.xml` metadata sidecar
 
 ## Invariants
 
-- Homepage components must not parse raw CMS payloads.
-- Publications archive components must not parse raw CMS payloads or indexes.
-- News archive components must not parse raw CMS payloads or indexes.
-- Staff and director pages must not parse raw CMS payloads inside route or UI
-  components.
-- Incomplete entries should be excluded rather than partially guessed.
-- Feed failures must degrade to section-level empty or error states.
-- Local navigation and homepage chrome content are intentionally not CMS-backed
-  at this stage.
-- Research landing copy is intentionally local even though the archive itself is
-  CMS-backed.
-- The broader About section remains locally modeled, but staff and directors are
-  explicitly CMS-backed because the live site sources them from `api.bber.unm.edu`.
+- page and presentation components must not parse raw CMS payloads
+- page and presentation components must not parse raw BBER REST payloads
+- incomplete upstream entries should be excluded rather than partially guessed
+- local navigation and stable shell content are intentionally not CMS-backed
+- research landing copy remains local even though publications are CMS-backed
+- if upstream data fails, the affected page or section should degrade
+  gracefully rather than crash the full route
 
 ## Current implementation locations
 
-- server fetches: `src/lib/cms/bber-homepage.ts`
-- normalization: `src/content-models/bber-homepage.ts`
-- rendering: homepage section components under `src/components/site/`
-- news archive fetches: `src/lib/cms/bber-news.ts`
-- news archive normalization: `src/content-models/bber-news.ts`
-- about people fetches: `src/lib/cms/bber-about.ts`
-- about people normalization: `src/content-models/bber-about-people.ts`
-- publications archive fetches: `src/lib/cms/bber-research.ts`
-- publications archive normalization: `src/content-models/bber-research.ts`
-- BBER data-portal fetches: `src/lib/bberdb.ts`
-- BBER data-portal normalization: `src/content-models/bberdb.ts`
+- homepage CMS fetches: `src/lib/cms/bber-homepage.ts`
+- homepage normalization: `src/content-models/bber-homepage.ts`
+- news fetches: `src/lib/cms/bber-news.ts`
+- news normalization: `src/content-models/bber-news.ts`
+- publications fetches: `src/lib/cms/bber-research.ts`
+- publications normalization: `src/content-models/bber-research.ts`
+- About people fetches: `src/lib/cms/bber-about.ts`
+- About people normalization: `src/content-models/bber-about-people.ts`
+- conference fetches: `src/lib/cms/bber-data-conferences.ts`
+- conference normalization: `src/content-models/bber-data-conferences.ts`
 - shared BBER data-bank metadata flow: `src/lib/bber-data-bank.ts`
-- RGIS map fetches: `src/lib/rgis.ts`
-- RGIS map normalization: `src/content-models/rgis.ts`
-- RGIS spatial export builders: `src/lib/rgis-downloads.ts`
-- RGIS XML metadata builder: `src/lib/rgis-xml.ts`
+- BBER DB fetches and normalization: `src/lib/bberdb.ts`,
+  `src/content-models/bberdb.ts`
+- RGIS fetches and normalization: `src/lib/rgis.ts`,
+  `src/content-models/rgis.ts`
+- RGIS spatial export builders: `src/lib/rgis-downloads.ts`,
+  `src/lib/rgis-xml.ts`
